@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offer UUID选择器</title>
+    <title>网盟原型示例</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -12,420 +12,46 @@
                 extend: {
                     colors: {
                         primary: '#3B82F6',
-                        secondary: '#10B981',
-                        neutral: '#F3F4F6',
-                        dark: '#1F2937',
-                    },
-                    fontFamily: {
-                        inter: ['Inter', 'system-ui', 'sans-serif'],
                     },
                 }
             }
         }
     </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .tag-transition {
-                transition: all 0.3s ease;
-            }
-            .dropdown-enter {
-                animation: dropdownEnter 0.2s ease-out forwards;
-            }
-            .dropdown-leave {
-                animation: dropdownLeave 0.2s ease-in forwards;
-            }
-            .editing-breathing-bg {
-                animation: breathingBackground 2s infinite;
-            }
-            @keyframes dropdownEnter {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes dropdownLeave {
-                from { opacity: 1; transform: translateY(0); }
-                to { opacity: 0; transform: translateY(-10px); }
-            }
-            @keyframes breathingBackground {
-                0% { background-color: rgba(59, 130, 246, 0.1); }
-                50% { background-color: rgba(59, 130, 246, 0.2); }
-                100% { background-color: rgba(59, 130, 246, 0.1); }
-            }
-        }
-    </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-inter text-dark">
-    <div class="max-w-4xl mx-auto px-4 py-12">
-        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 transform transition-all hover:shadow-xl">
-            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-center mb-8 text-dark">
-                Offer UUID选择器
-            </h1>
-            
-            <div class="mb-8">
-                <p class="text-gray-600 mb-4 text-center">
-                    输入关键词进行联想，或粘贴多个UUID（使用英文逗号或换行分隔）进行批量选择
-                </p>
-                
-                <!-- 已选标签显示在输入框上方 -->
-                <div id="selected-tags-container" class="mb-3 flex flex-wrap gap-2 min-h-[38px]">
-                    <div class="w-full text-gray-400 italic text-center py-2" id="empty-selection-message">
-                        暂无选择的Offer UUID
-                    </div>
-                </div>
-                
-                <div class="relative">
-                    <!-- 标签容器 -->
-                    <div id="tags-container" class="flex flex-wrap items-center gap-2 p-3 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
-                        <!-- 输入框 -->
-                        <input 
-                            type="text" 
-                            id="uuid-input" 
-                            placeholder="输入或粘贴Offer UUID..." 
-                            class="flex-1 min-w-[150px] outline-none py-1.5 text-gray-800"
-                        >
-                    </div>
-                    
-                    <!-- 联想下拉框 -->
-                    <div id="suggestions-container" class="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-10 hidden max-h-60 overflow-y-auto">
-                        <!-- 联想结果会动态添加到这里 -->
-                    </div>
-                </div>
-            </div>
-        </div>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="mb-12 text-center">
+        <h1 class="text-[clamp(1.5rem,5vw,3rem)] font-bold text-dark">网盟原型示例</h1>
+    </div>
+    
+    <div class="w-full max-w-md space-y-4">
+        <a href=https://github.com/tabimo/3s_prototype/blob/main/offer_uuid_selector.html" target="_blank" class="w-full flex items-center justify-center px-6 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg transition-all transform hover:scale-105">
+            <i class="fa fa-tags mr-3"></i>
+            <span>Offer UUID选择器</span>
+        </a>
         
-        <div class="mt-6 text-center text-sm text-gray-500">
-            <p>支持的分隔符：英文逗号(,)、换行符</p>
+        <!-- 预留更多按钮位置 -->
+        <div id="additional-buttons" class="space-y-4">
+            <!-- 后续可以添加更多按钮 -->
         </div>
     </div>
 
     <script>
-        // 可用的Offer UUID列表
-        const availableOffers = [
-            'cps_shopee_aos_my_ntd_ua_smartlink',
-            'cps_shopee_aos_ph_ntd_ua_smartlink',
-            'iacps_temu_aos_br_n',
-            'iacps_temu_aos_us_n',
-            'shein_cps_aos_br_ntd',
-            'shein_cps_aos_es_ntd',
-            'shein_cps_aos_fr_ntd',
-            'shein_cps_aos_mx_ntd',
-            'shein_cps_aos_uk_ntd',
-            'shein_cps_aos_us_ntd',
-            'shein_cps_mtg_aos_ph_ntd',
-            'tiktok_us_rt_test_5_ntd'
-        ];
-        
-        // 已选择的Offer UUID集合
-        const selectedOffers = new Set();
-        
-        // DOM元素
-        const inputElement = document.getElementById('uuid-input');
-        const tagsContainer = document.getElementById('tags-container');
-        const suggestionsContainer = document.getElementById('suggestions-container');
-        const selectedTagsContainer = document.getElementById('selected-tags-container');
-        const emptySelectionMessage = document.getElementById('empty-selection-message');
-        
-        // 初始化
-        function init() {
-            // 监听输入事件
-            inputElement.addEventListener('input', handleInput);
-            inputElement.addEventListener('paste', handlePaste);
-            inputElement.addEventListener('keydown', handleKeydown);
-            
-            // 点击页面其他地方关闭联想框并清空输入框
-            document.addEventListener('click', (e) => {
-                if (!tagsContainer.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                    hideSuggestions();
-                    // 清空输入框内容
-                    inputElement.value = '';
-                }
-            });
-            
-            // 输入框聚焦时显示联想框
-            inputElement.addEventListener('focus', () => {
-                if (inputElement.value.trim()) {
-                    showSuggestions(inputElement.value);
-                }
-            });
-        }
-        
-        // 处理输入事件
-        function handleInput(e) {
-            const value = e.target.value.trim();
-            if (value) {
-                showSuggestions(value);
-            } else {
-                hideSuggestions();
-            }
-        }
-        
-        // 处理粘贴事件
-        function handlePaste(e) {
-            e.preventDefault();
-            const clipboardData = e.clipboardData || window.clipboardData;
-            const pastedText = clipboardData.getData('text');
-            
-            // 按分隔符拆分
-            const values = pastedText
-                .split(/[,|\n]+/)
-                .map(item => item.trim())
-                .filter(item => item);
-            
-            if (values.length === 1) {
-                // 单个值，作为关键词处理
-                inputElement.value = values[0];
-                showSuggestions(values[0]);
-            } else {
-                // 多个值，批量处理
-                processBatchSelection(values);
-                inputElement.value = '';
-                hideSuggestions();
-            }
-        }
-        
-        // 处理键盘事件
-        function handleKeydown(e) {
-            // 按下Enter键
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = inputElement.value.trim();
-                if (value) {
-                    addOffer(value);
-                    // 保留输入框内容，不清空
-                    // inputElement.value = '';
-                    // 更新联想结果
-                    showSuggestions(value);
-                }
-            }
-            
-            // 按下Escape键
-            if (e.key === 'Escape') {
-                hideSuggestions();
-                // 清空输入框内容
-                inputElement.value = '';
-            }
-        }
-        
-        // 显示联想建议
-        function showSuggestions(keyword) {
-            // 过滤匹配的建议
-            const suggestions = availableOffers.filter(offer => 
-                offer.toLowerCase().includes(keyword.toLowerCase()) && !selectedOffers.has(offer)
-            );
-            
-            if (suggestions.length === 0) {
-                hideSuggestions();
-                return;
-            }
-            
-            // 清空之前的建议
-            suggestionsContainer.innerHTML = '';
-            
-            // 添加新建议
-            suggestions.forEach(offer => {
-                const suggestionItem = document.createElement('div');
-                suggestionItem.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer transition-colors flex items-center';
-                
-                // 高亮匹配部分
-                const regex = new RegExp(`(${keyword})`, 'gi');
-                const highlightedText = offer.replace(regex, '<span class="font-semibold text-primary">$1</span>');
-                
-                suggestionItem.innerHTML = `
-                    <i class="fa fa-tag text-gray-400 mr-2"></i>
-                    <span>${highlightedText}</span>
-                `;
-                
-                suggestionItem.addEventListener('click', (e) => {
-                    // 阻止事件冒泡，避免触发document的点击事件
-                    e.stopPropagation();
-                    
-                    addOffer(offer);
-                    
-                    // 保留输入框内容，不清空
-                    // inputElement.value = '';
-                    
-                    // 更新联想结果
-                    showSuggestions(inputElement.value);
-                });
-                
-                suggestionsContainer.appendChild(suggestionItem);
-            });
-            
-            // 显示联想框并添加动画
-            suggestionsContainer.classList.remove('hidden', 'dropdown-leave');
-            suggestionsContainer.classList.add('dropdown-enter');
-        }
-        
-        // 隐藏联想建议
-        function hideSuggestions() {
-            if (!suggestionsContainer.classList.contains('hidden')) {
-                suggestionsContainer.classList.remove('dropdown-enter');
-                suggestionsContainer.classList.add('dropdown-leave');
-                
-                setTimeout(() => {
-                    suggestionsContainer.classList.add('hidden');
-                }, 200);
-            }
-        }
-        
-        // 添加单个Offer
-        function addOffer(offer) {
-            // 检查是否已选择
-            if (selectedOffers.has(offer)) {
-                showNotification('该Offer UUID已被选中', 'warning');
-                return;
-            }
-            
-            // 检查是否存在
-            if (!availableOffers.includes(offer)) {
-                showNotification('无效的Offer UUID', 'error');
-                return;
-            }
-            
-            // 添加到已选择集合
-            selectedOffers.add(offer);
-            
-            // 更新UI
-            updateSelectedTags();
-            
-            // 显示成功通知
-            showNotification(`已添加: ${offer}`, 'success');
-        }
-        
-        // 批量处理选择
-        function processBatchSelection(values) {
-            const validOffers = [];
-            const invalidOffers = [];
-            const duplicateOffers = [];
-            
-            values.forEach(value => {
-                if (selectedOffers.has(value)) {
-                    duplicateOffers.push(value);
-                } else if (availableOffers.includes(value)) {
-                    validOffers.push(value);
-                    selectedOffers.add(value);
-                } else {
-                    invalidOffers.push(value);
-                }
-            });
-            
-            // 更新UI
-            updateSelectedTags();
-            
-            // 显示通知
-            let message = '';
-            if (validOffers.length > 0) {
-                message += `成功添加 ${validOffers.length} 个Offer UUID<br>`;
-            }
-            if (duplicateOffers.length > 0) {
-                message += `已存在 ${duplicateOffers.length} 个Offer UUID<br>`;
-            }
-            if (invalidOffers.length > 0) {
-                message += `无效的Offer UUID: ${invalidOffers.length} 个`;
-            }
-            
-            if (message) {
-                showNotification(message, validOffers.length > 0 ? 'success' : 'warning');
-            }
-        }
-        
-        // 更新已选标签UI
-        function updateSelectedTags() {
-            // 清空容器
-            selectedTagsContainer.innerHTML = '';
-            
-            // 检查是否有选中项
-            if (selectedOffers.size === 0) {
-                selectedTagsContainer.appendChild(emptySelectionMessage);
-                return;
-            }
-            
-            // 添加所有选中标签
-            selectedOffers.forEach(offer => {
-                const tagElement = document.createElement('div');
-                tagElement.className = 'bg-primary/10 text-primary px-3 py-1.5 rounded-full flex items-center tag-transition hover:bg-primary/20';
-                
-                tagElement.innerHTML = `
-                    <span class="truncate max-w-[200px] md:max-w-[300px]">${offer}</span>
-                    <button class="ml-2 text-primary/70 hover:text-primary transition-colors" data-offer="${offer}">
-                        <i class="fa fa-times-circle"></i>
-                    </button>
-                `;
-                
-                // 添加删除事件
-                const deleteButton = tagElement.querySelector('button');
-                deleteButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const offerToRemove = e.currentTarget.getAttribute('data-offer');
-                    selectedOffers.delete(offerToRemove);
-                    updateSelectedTags();
-                    showNotification(`已移除: ${offerToRemove}`, 'info');
-                });
-                
-                selectedTagsContainer.appendChild(tagElement);
-            });
-        }
-        
-        // 显示通知
-        function showNotification(message, type = 'info') {
-            // 创建通知元素
-            const notification = document.createElement('div');
-            
-            // 设置样式
-            let bgColor, textColor, icon;
-            switch(type) {
-                case 'success':
-                    bgColor = 'bg-secondary/90';
-                    textColor = 'text-white';
-                    icon = 'fa-check-circle';
-                    break;
-                case 'error':
-                    bgColor = 'bg-red-500/90';
-                    textColor = 'text-white';
-                    icon = 'fa-exclamation-circle';
-                    break;
-                case 'warning':
-                    bgColor = 'bg-amber-500/90';
-                    textColor = 'text-white';
-                    icon = 'fa-exclamation-triangle';
-                    break;
-                case 'info':
-                default:
-                    bgColor = 'bg-primary/90';
-                    textColor = 'text-white';
-                    icon = 'fa-info-circle';
-                    break;
-            }
-            
-            notification.className = `${bgColor} ${textColor} px-4 py-2 rounded-lg shadow-lg fixed bottom-4 right-4 flex items-center z-50 transform transition-all duration-300 opacity-0 translate-y-2`;
-            
-            // 设置内容
-            notification.innerHTML = `
-                <i class="fa ${icon} mr-2"></i>
-                <span>${message}</span>
+        // 示例：动态添加按钮（仅作演示，实际使用时可根据需求调整）
+        function addButton(label, icon, href) {
+            const button = document.createElement('a');
+            button.href = href;
+            button.target = '_blank';
+            button.className = 'w-full flex items-center justify-center px-6 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg transition-all transform hover:scale-105';
+            button.innerHTML = `
+                <i class="fa ${icon} mr-3"></i>
+                <span>${label}</span>
             `;
             
-            // 添加到页面
-            document.body.appendChild(notification);
-            
-            // 显示动画
-            setTimeout(() => {
-                notification.classList.remove('opacity-0', 'translate-y-2');
-            }, 10);
-            
-            // 自动关闭
-            setTimeout(() => {
-                notification.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, 3000);
+            document.getElementById('additional-buttons').appendChild(button);
         }
         
-        // 初始化应用
-        document.addEventListener('DOMContentLoaded', init);
+        // 示例：添加一个"数据分析"按钮
+        // addButton('数据分析', 'fa-bar-chart', 'https://github.com/your-username/your-repo/blob/main/analytics.html');
     </script>
 </body>
 </html>    
