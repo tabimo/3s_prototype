@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广告主Mob号白名单管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#6B7280',
+                        success: '#36D399',
+                        warning: '#FBBD23',
+                        danger: '#F87272',
+                        info: '#3ABFF8',
+                        light: '#F3F4F6',
+                        dark: '#1F2937',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .table-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .btn-hover {
+                @apply transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5;
+            }
+            .form-input-focus {
+                @apply focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-200;
+            }
+            .editing-breathing-bg {
+                animation: breathing 2s ease-in-out infinite;
+            }
+            @keyframes breathing {
+                0%, 100% {
+                    background-color: rgba(22, 93, 255, 0.05);
+                }
+                50% {
+                    background-color: rgba(22, 93, 255, 0.15);
+                }
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-shield text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">广告主Mob号白名单管理系统</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="fa fa-question-circle"></i>
+                    <span class="hidden md:inline ml-1">帮助</span>
+                </button>
+                <button class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="fa fa-user-circle"></i>
+                    <span class="hidden md:inline ml-1">管理员</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-6">
+        <!-- 搜索筛选区 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex-1">
+                    <label for="search-advertiser" class="block text-sm font-medium text-gray-700 mb-1">
+                        按广告主筛选
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" id="search-advertiser" name="search-advertiser" 
+                            class="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-primary focus:border-primary"
+                            placeholder="输入广告主名称...">
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="reset-filter" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                        <i class="fa fa-refresh mr-1"></i>重置
+                    </button>
+                    <button id="add-white-list" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 btn-hover">
+                        <i class="fa fa-plus mr-1"></i>添加Mob白名单
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据列表 -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Advertiser
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Subid List
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                更新时间
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Operation
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="whitelist-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- 表格内容将通过JavaScript动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- 空状态 -->
+            <div id="empty-state" class="hidden py-16 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                    <i class="fa fa-file-text-o text-gray-400 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">暂无白名单记录</h3>
+                <p class="text-gray-500 max-w-md mx-auto">点击"添加Mob白名单"按钮创建第一条白名单记录</p>
+                <button id="add-first-record" class="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 btn-hover">
+                    <i class="fa fa-plus mr-1"></i>添加Mob白名单
+                </button>
+            </div>
+            <!-- 加载状态 -->
+            <div id="loading-state" class="hidden py-16 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 mb-4">
+                    <div class="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+                </div>
+                <p class="text-gray-500">正在加载数据...</p>
+            </div>
+        </div>
+
+        <!-- 分页 -->
+        <div class="mt-6 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+                显示 <span id="start-index">1</span> 到 <span id="end-index">0</span> 条，共 <span id="total-count">0</span> 条记录
+            </div>
+            <div class="flex space-x-2">
+                <button id="prev-page" class="px-3 py-1 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                    <i class="fa fa-chevron-left"></i>
+                </button>
+                <div id="pagination-numbers" class="flex space-x-1">
+                    <!-- 页码将通过JavaScript动态生成 -->
+                </div>
+                <button id="next-page" class="px-3 py-1 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                    <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="text-gray-500 text-sm mb-4 md:mb-0">
+                    © 2025 广告主Mob号白名单管理系统 - 版权所有
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-question-circle"></i>帮助中心
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-file-text-o"></i>使用文档
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-envelope-o"></i>联系我们
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 添加/编辑白名单弹窗 -->
+    <div id="whitelist-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h3 id="modal-title" class="text-lg font-medium text-gray-900">添加Mob号白名单</h3>
+                <button id="close-modal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="whitelist-form" class="p-6 space-y-6">
+                <div class="space-y-4">
+                    <div>
+                        <label for="advertiser" class="block text-sm font-medium text-gray-700 mb-1">
+                            Advertiser <span class="text-danger">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa fa-search text-gray-400"></i>
+                            </div>
+                            <select id="advertiser" name="advertiser" 
+                                class="pl-10 block w-full rounded-md border-gray-300 shadow-sm form-input-focus"
+                                required>
+                                <option value="">请选择广告主</option>
+                                <!-- 广告主选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="subid-list" class="block text-sm font-medium text-gray-700 mb-1">
+                            Subid List
+                        </label>
+                        <div class="flex flex-col space-y-2">
+                            <textarea id="subid-list" name="subid-list" rows="6" 
+                                class="block w-full rounded-md border-gray-300 shadow-sm form-input-focus"
+                                placeholder="请输入Mob号，多个Mob号用逗号或换行分隔"></textarea>
+                            <div class="flex justify-between items-center">
+                                <span id="subid-count" class="text-sm text-gray-500">
+                                    已输入 <span class="font-medium">0</span> 个Mob号
+                                </span>
+                                <div class="flex space-x-2">
+                                    <button type="button" id="batch-add-btn" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 btn-hover">
+                                        <i class="fa fa-plus-circle mr-1"></i>批量添加
+                                    </button>
+                                    <input type="number" id="batch-add-count" min="1" value="10" 
+                                        class="w-20 text-sm border border-gray-300 rounded-md px-2 py-1 form-input-focus">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="button" id="replace-mob-btn" class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                            <i class="fa fa-exchange mr-1"></i>指定Mob替换
+                        </button>
+                        <button type="button" id="delete-mob-btn" class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                            <i class="fa fa-trash mr-1"></i>指定Mob删除
+                        </button>
+                    </div>
+                </div>
+                <div class="border-t pt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-form" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                        取消
+                    </button>
+                    <button type="submit" id="submit-form" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 btn-hover">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 指定Mob替换/删除弹窗 -->
+    <div id="update-mob-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h3 id="update-modal-title" class="text-lg font-medium text-gray-900">Subid Update List</h3>
+                <button id="close-update-modal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="update-mob-form" class="p-6 space-y-4">
+                <div>
+                    <label for="update-mob-list" class="block text-sm font-medium text-gray-700 mb-1">
+                        请输入要操作的Mob号
+                    </label>
+                    <textarea id="update-mob-list" name="update-mob-list" rows="4" 
+                        class="block w-full rounded-md border-gray-300 shadow-sm form-input-focus"
+                        placeholder="请输入Mob号，多个Mob号用逗号或换行分隔"></textarea>
+                    <p class="mt-1 text-sm text-gray-500">
+                        输入要<span id="update-action-text">替换</span>的Mob号，多个Mob号用逗号或换行分隔
+                    </p>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancel-update" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                        取消
+                    </button>
+                    <button type="submit" id="submit-update" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 btn-hover">
+                        确认
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 删除确认弹窗 -->
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-6">
+                <div class="text-center">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-danger/10 mb-4">
+                        <i class="fa fa-exclamation-triangle text-danger text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">确认删除</h3>
+                    <p class="text-gray-500 mb-6">
+                        是否要删除此Mob号白名单？删除后将无法恢复。
+                    </p>
+                    <div class="flex justify-center space-x-3">
+                        <button id="cancel-delete" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                            取消
+                        </button>
+                        <button id="confirm-delete" class="px-4 py-2 bg-danger text-white rounded-md hover:bg-danger/90 btn-hover">
+                            确认删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查看白名单详情弹窗 -->
+    <div id="view-whitelist-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h3 id="view-modal-title" class="text-lg font-medium text-gray-900">
+                    <span id="view-advertiser-name">广告主</span> 的Mob号白名单
+                </h3>
+                <button id="close-view-modal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-sm font-medium text-gray-500">Subid列表 (共 <span id="view-subid-count">0</span> 个Mob号)</h4>
+                        <div class="flex space-x-2">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa fa-search text-gray-400"></i>
+                                </div>
+                                <input type="text" id="view-search-subid" placeholder="搜索Mob号..." 
+                                    class="pl-10 block w-full rounded-md border-gray-300 shadow-sm form-input-focus text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[50vh] overflow-y-auto">
+                        <div id="view-subid-list" class="col-span-full">
+                            <!-- Subid列表将通过JavaScript动态生成 -->
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fa fa-spinner fa-spin mr-2"></i>加载中...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t pt-6 flex justify-end">
+                    <button id="close-view" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 btn-hover">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed top-4 right-4 z-50 max-w-sm w-full transform transition-all duration-300 ease-in-out translate-x-full opacity-0">
+        <div id="notification-content" class="bg-white rounded-lg shadow-lg p-4 flex items-start">
+            <div id="notification-icon" class="flex-shrink-0 mr-3 text-primary">
+                <i class="fa fa-info-circle text-xl"></i>
+            </div>
+            <div class="flex-grow">
+                <h4 id="notification-title" class="text-sm font-medium text-gray-900">通知标题</h4>
+                <p id="notification-message" class="text-sm text-gray-500 mt-1">通知内容</p>
+            </div>
+            <button id="close-notification" class="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-500">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 示例数据
+        const sampleAdvertisers = [
+            'maingames', 'yueshijie', 'ecomobi', 'MOMO', 'Ruishi', 'Aviagames'
+        ];
+
+        // 生成随机Mob号
+        function generateRandomMobId() {
+            const prefix = 'mob';
+            const characters = 'abcdef0123456789';
+            let result = '';
+            for (let i = 0; i < 16; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return prefix + result;
+        }
+
+        // 生成指定数量的随机Mob号
+        function generateMobIds(count) {
+            const mobIds = [];
+            for (let i = 0; i < count; i++) {
+                mobIds.push(generateRandomMobId());
+            }
+            return mobIds;
+        }
+
+        // 示例白名单数据
+        const sampleWhitelists = [
+            {
+                id: 1,
+                advertiser: 'maingames',
+                subids: generateMobIds(25),
+                updatedAt: '2025-07-10 14:30:22'
+            },
+            {
+                id: 2,
+                advertiser: 'yueshijie',
+                subids: generateMobIds(18),
+                updatedAt: '2025-07-09 10:15:45'
+            },
+            {
+                id: 3,
+                advertiser: 'ecomobi',
+                subids: generateMobIds(50),
+                updatedAt: '2025-07-12 09:42:18'
+            },
+            {
+                id: 4,
+                advertiser: 'MOMO',
+                subids: generateMobIds(7),
+                updatedAt: '2025-07-08 16:22:31'
+            },
+            {
+                id: 5,
+                advertiser: 'Ruishi',
+                subids: generateMobIds(33),
+                updatedAt: '2025-07-13 11:58:06'
+            },
+            {
+                id: 6,
+                advertiser: 'Aviagames',
+                subids: generateMobIds(12),
+                updatedAt: '2025-07-11 15:33:49'
+            }
+        ];
+
+        // 应用状态
+        const state = {
+            whitelists: [...sampleWhitelists],
+            currentPage: 1,
+            itemsPerPage: 5,
+            searchQuery: '',
+            currentWhitelistId: null,
+            updateAction: 'replace', // 'replace' 或 'delete'
+        };
+
+        // DOM元素
+        const elements = {
+            whitelistTableBody: document.getElementById('whitelist-table-body'),
+            emptyState: document.getElementById('empty-state'),
+            loadingState: document.getElementById('loading-state'),
+            addWhiteListBtn: document.getElementById('add-white-list'),
+            addFirstRecordBtn: document.getElementById('add-first-record'),
+            whitelistModal: document.getElementById('whitelist-modal'),
+            closeModalBtn: document.getElementById('close-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            advertiserSelect: document.getElementById('advertiser'),
+            subidListTextarea: document.getElementById('subid-list'),
+            subidCount: document.getElementById('subid-count'),
+            batchAddBtn: document.getElementById('batch-add-btn'),
+            batchAddCount: document.getElementById('batch-add-count'),
+            replaceMobBtn: document.getElementById('replace-mob-btn'),
+            deleteMobBtn: document.getElementById('delete-mob-btn'),
+            cancelFormBtn: document.getElementById('cancel-form'),
+            submitFormBtn: document.getElementById('submit-form'),
+            updateMobModal: document.getElementById('update-mob-modal'),
+            closeUpdateModalBtn: document.getElementById('close-update-modal'),
+            updateModalTitle: document.getElementById('update-modal-title'),
+            updateActionText: document.getElementById('update-action-text'),
+            updateMobListTextarea: document.getElementById('update-mob-list'),
+            cancelUpdateBtn: document.getElementById('cancel-update'),
+            submitUpdateBtn: document.getElementById('submit-update'),
+            deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+            cancelDeleteBtn: document.getElementById('cancel-delete'),
+            confirmDeleteBtn: document.getElementById('confirm-delete'),
+            viewWhitelistModal: document.getElementById('view-whitelist-modal'),
+            closeViewModalBtn: document.getElementById('close-view-modal'),
+            closeViewBtn: document.getElementById('close-view'),
+            viewModalTitle: document.getElementById('view-modal-title'),
+            viewAdvertiserName: document.getElementById('view-advertiser-name'),
+            viewSubidCount: document.getElementById('view-subid-count'),
+            viewSearchSubid: document.getElementById('view-search-subid'),
+            viewSubidList: document.getElementById('view-subid-list'),
+            searchAdvertiserInput: document.getElementById('search-advertiser'),
+            resetFilterBtn: document.getElementById('reset-filter'),
+            prevPageBtn: document.getElementById('prev-page'),
+            nextPageBtn: document.getElementById('next-page'),
+            paginationNumbers: document.getElementById('pagination-numbers'),
+            startIndex: document.getElementById('start-index'),
+            endIndex: document.getElementById('end-index'),
+            totalCount: document.getElementById('total-count'),
+            notification: document.getElementById('notification'),
+            notificationContent: document.getElementById('notification-content'),
+            notificationIcon: document.getElementById('notification-icon'),
+            notificationTitle: document.getElementById('notification-title'),
+            notificationMessage: document.getElementById('notification-message'),
+            closeNotificationBtn: document.getElementById('close-notification'),
+        };
+
+        // 初始化广告主下拉列表
+        function initAdvertiserSelect() {
+            elements.advertiserSelect.innerHTML = '<option value="">请选择广告主</option>';
+            sampleAdvertisers.forEach(advertiser => {
+                const option = document.createElement('option');
+                option.value = advertiser;
+                option.textContent = advertiser;
+                elements.advertiserSelect.appendChild(option);
+            });
+        }
+
+        // 渲染白名单表格
+        function renderWhitelistTable() {
+            // 显示加载状态
+            elements.loadingState.classList.remove('hidden');
+            elements.whitelistTableBody.classList.add('hidden');
+            elements.emptyState.classList.add('hidden');
+
+            // 模拟API请求延迟
+            setTimeout(() => {
+                // 过滤数据
+                let filteredWhitelists = [...state.whitelists];
+                if (state.searchQuery) {
+                    filteredWhitelists = filteredWhitelists.filter(whitelist => 
+                        whitelist.advertiser.toLowerCase().includes(state.searchQuery.toLowerCase())
+                    );
+                }
+
+                // 计算分页
+                const totalPages = Math.ceil(filteredWhitelists.length / state.itemsPerPage);
+                const startIndex = (state.currentPage - 1) * state.itemsPerPage;
+                const endIndex = Math.min(startIndex + state.itemsPerPage, filteredWhitelists.length);
+                const paginatedWhitelists = filteredWhitelists.slice(startIndex, endIndex);
+
+                // 更新分页信息
+                elements.startIndex.textContent = filteredWhitelists.length > 0 ? startIndex + 1 : 0;
+                elements.endIndex.textContent = endIndex;
+                elements.totalCount.textContent = filteredWhitelists.length;
+
+                // 渲染表格
+                elements.whitelistTableBody.innerHTML = '';
+                if (paginatedWhitelists.length > 0) {
+                    paginatedWhitelists.forEach(whitelist => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50 transition-colors';
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">${whitelist.advertiser}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="#" data-id="${whitelist.id}" class="edit-whitelist text-primary hover:text-primary/80 font-medium">
+                                    ${whitelist.subids.length}个Mob号
+                                </a>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${whitelist.updatedAt}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button data-id="${whitelist.id}" class="edit-whitelist text-primary hover:text-primary/80 mr-4">
+                                    <i class="fa fa-pencil mr-1"></i>Edit
+                                </button>
+                                <button data-id="${whitelist.id}" class="delete-whitelist text-danger hover:text-danger/80">
+                                    <i class="fa fa-trash mr-1"></i>Delete
+                                </button>
+                            </td>
+                        `;
+                        elements.whitelistTableBody.appendChild(row);
+                    });
+
+                    // 添加事件监听器
+                    document.querySelectorAll('.edit-whitelist').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const id = parseInt(btn.getAttribute('data-id'));
+                            openEditWhitelistModal(id);
+                        });
+                    });
+
+                    document.querySelectorAll('.delete-whitelist').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const id = parseInt(btn.getAttribute('data-id'));
+                            openDeleteConfirmModal(id);
+                        });
+                    });
+
+                    elements.whitelistTableBody.classList.remove('hidden');
+                } else {
+                    elements.emptyState.classList.remove('hidden');
+                }
+
+                // 渲染分页
+                renderPagination(totalPages);
+
+                // 隐藏加载状态
+                elements.loadingState.classList.add('hidden');
+            }, 500);
+        }
+
+        // 渲染分页
+        function renderPagination(totalPages) {
+            elements.paginationNumbers.innerHTML = '';
+            
+            // 只显示当前页附近的页码
+            let startPage = Math.max(1, state.currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            // 调整起始页，确保显示5个页码
+            if (endPage - startPage < 4 && startPage > 1) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            // 添加上一页按钮
+            elements.prevPageBtn.disabled = state.currentPage === 1;
+            elements.prevPageBtn.classList.toggle('opacity-50', state.currentPage === 1);
+
+            // 添加第一页
+            if (startPage > 1) {
+                addPageNumber(1);
+                if (startPage > 2) {
+                    addEllipsis();
+                }
+            }
+
+            // 添加中间页码
+            for (let i = startPage; i <= endPage; i++) {
+                addPageNumber(i);
+            }
+
+            // 添加最后一页
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    addEllipsis();
+                }
+                addPageNumber(totalPages);
+            }
+
+            // 添加下一页按钮
+            elements.nextPageBtn.disabled = state.currentPage === totalPages;
+            elements.nextPageBtn.classList.toggle('opacity-50', state.currentPage === totalPages);
+
+            function addPageNumber(page) {
+                const button = document.createElement('button');
+                button.className = `px-3 py-1 rounded-md ${
+                    page === state.currentPage 
+                        ? 'bg-primary text-white' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                }`;
+                button.textContent = page;
+                button.addEventListener('click', () => {
+                    if (page !== state.currentPage) {
+                        state.currentPage = page;
+                        renderWhitelistTable();
+                    }
+                });
+                elements.paginationNumbers.appendChild(button);
+            }
+
+            function addEllipsis() {
+                const span = document.createElement('span');
+                span.className = 'px-2 text-gray-500';
+                span.textContent = '...';
+                elements.paginationNumbers.appendChild(span);
+            }
+        }
+
+        // 打开添加白名单模态框
+        function openAddWhitelistModal() {
+            state.currentWhitelistId = null;
+            elements.modalTitle.textContent = '添加Mob号白名单';
+            elements.advertiserSelect.disabled = false;
+            elements.advertiserSelect.value = '';
+            elements.subidListTextarea.value = '';
+            updateSubidCount();
+            elements.whitelistModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 打开编辑白名单模态框
+        function openEditWhitelistModal(id) {
+            const whitelist = state.whitelists.find(item => item.id === id);
+            if (!whitelist) return;
+
+            state.currentWhitelistId = id;
+            elements.modalTitle.textContent = '编辑Mob号白名单';
+            elements.advertiserSelect.disabled = true;
+            elements.advertiserSelect.value = whitelist.advertiser;
+            elements.subidListTextarea.value = whitelist.subids.join('\n');
+            updateSubidCount();
+            elements.whitelistModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 打开删除确认模态框
+        function openDeleteConfirmModal(id) {
+            state.currentWhitelistId = id;
+            elements.deleteConfirmModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 打开查看白名单详情模态框
+        function openViewWhitelistModal(id) {
+            const whitelist = state.whitelists.find(item => item.id === id);
+            if (!whitelist) return;
+
+            state.currentWhitelistId = id;
+            elements.viewAdvertiserName.textContent = whitelist.advertiser;
+            elements.viewSubidCount.textContent = whitelist.subids.length;
+            
+            // 显示加载状态
+            elements.viewSubidList.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fa fa-spinner fa-spin mr-2"></i>加载中...
+                </div>
+            `;
+            
+            // 模拟API请求延迟
+            setTimeout(() => {
+                renderViewSubidList(whitelist.subids);
+            }, 300);
+            
+            elements.viewWhitelistModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 渲染查看白名单详情中的Subid列表
+        function renderViewSubidList(subids) {
+            const searchQuery = elements.viewSearchSubid.value.toLowerCase();
+            let filteredSubids = subids;
+            
+            if (searchQuery) {
+                filteredSubids = subids.filter(subid => 
+                    subid.toLowerCase().includes(searchQuery)
+                );
+            }
+            
+            if (filteredSubids.length === 0) {
+                elements.viewSubidList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fa fa-search mr-2"></i>未找到匹配的Mob号
+                    </div>
+                `;
+                return;
+            }
+            
+            elements.viewSubidList.innerHTML = '';
+            filteredSubids.forEach(subid => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 p-2 rounded-md text-sm truncate hover:bg-gray-100 transition-colors';
+                div.textContent = subid;
+                elements.viewSubidList.appendChild(div);
+            });
+        }
+
+        // 更新Subid计数
+        function updateSubidCount() {
+            const text = elements.subidListTextarea.value.trim();
+            const count = text ? text.split(/[\n,]+/).filter(item => item.trim()).length : 0;
+            elements.subidCount.innerHTML = `已输入 <span class="font-medium">${count}</span> 个Mob号`;
+        }
+
+        // 打开Subid更新模态框
+        function openUpdateMobModal(action) {
+            state.updateAction = action;
+            elements.updateActionText.textContent = action === 'replace' ? '替换' : '删除';
+            elements.updateMobListTextarea.value = '';
+            elements.updateMobModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 处理Subid更新
+        function handleUpdateMob() {
+            const updateText = elements.updateMobListTextarea.value.trim();
+            if (!updateText) {
+                showNotification('错误', '请输入要操作的Mob号', 'error');
+                return;
+            }
+            
+            const updateMobIds = updateText.split(/[\n,]+/).filter(item => item.trim());
+            const currentSubidText = elements.subidListTextarea.value;
+            let currentSubids = currentSubidText ? currentSubidText.split(/[\n,]+/).filter(item => item.trim()) : [];
+            
+            // 移除要更新的Mob号
+            const filteredSubids = currentSubids.filter(subid => !updateMobIds.includes(subid));
+            
+            if (state.updateAction === 'replace') {
+                // 添加新生成的Mob号
+                const newMobIds = generateMobIds(updateMobIds.length);
+                currentSubids = [...filteredSubids, ...newMobIds];
+            } else {
+                // 仅删除，不添加新的
+                currentSubids = filteredSubids;
+            }
+            
+            // 更新文本域
+            elements.subidListTextarea.value = currentSubids.join('\n');
+            updateSubidCount();
+            
+            // 关闭模态框
+            elements.updateMobModal.classList.add('hidden');
+            document.body.style.overflow = '';
+            
+            showNotification('成功', `已${state.updateAction === 'replace' ? '替换' : '删除'} ${updateMobIds.length} 个Mob号`, 'success');
+        }
+
+        // 保存白名单
+        function saveWhitelist() {
+            const advertiser = elements.advertiserSelect.value;
+            const subidText = elements.subidListTextarea.value.trim();
+            
+            if (!advertiser) {
+                showNotification('错误', '请选择广告主', 'error');
+                return;
+            }
+            
+            if (!subidText) {
+                showNotification('错误', '请输入至少一个Mob号', 'error');
+                return;
+            }
+            
+            const subids = subidText.split(/[\n,]+/).filter(item => item.trim());
+            
+            if (state.currentWhitelistId !== null) {
+                // 编辑现有白名单
+                const index = state.whitelists.findIndex(item => item.id === state.currentWhitelistId);
+                if (index !== -1) {
+                    state.whitelists[index] = {
+                        ...state.whitelists[index],
+                        subids,
+                        updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                    };
+                    showNotification('成功', '白名单更新成功', 'success');
+                }
+            } else {
+                // 添加新白名单
+                const newId = Math.max(0, ...state.whitelists.map(item => item.id)) + 1;
+                state.whitelists.unshift({
+                    id: newId,
+                    advertiser,
+                    subids,
+                    updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                });
+                showNotification('成功', '白名单添加成功', 'success');
+            }
+            
+            // 关闭模态框
+            elements.whitelistModal.classList.add('hidden');
+            document.body.style.overflow = '';
+            
+            // 刷新表格
+            renderWhitelistTable();
+        }
+
+        // 删除白名单
+        function deleteWhitelist() {
+            if (state.currentWhitelistId !== null) {
+                state.whitelists = state.whitelists.filter(item => item.id !== state.currentWhitelistId);
+                showNotification('成功', '白名单已删除', 'success');
+            }
+            
+            // 关闭模态框
+            elements.deleteConfirmModal.classList.add('hidden');
+            document.body.style.overflow = '';
+            
+            // 刷新表格
+            renderWhitelistTable();
+        }
+
+        // 批量添加Mob号
+        function batchAddMobIds() {
+            const count = parseInt(elements.batchAddCount.value) || 10;
+            const newMobIds = generateMobIds(count);
+            
+            const currentSubidText = elements.subidListTextarea.value;
+            const currentSubids = currentSubidText ? currentSubidText.split(/[\n,]+/).filter(item => item.trim()) : [];
+            
+            const updatedSubids = [...currentSubids, ...newMobIds];
+            elements.subidListTextarea.value = updatedSubids.join('\n');
+            updateSubidCount();
+            
+            showNotification('成功', `已添加 ${count} 个新Mob号`, 'success');
+        }
+
+        // 显示通知
+        function showNotification(title, message, type = 'info') {
+            // 设置通知内容
+            elements.notificationTitle.textContent = title;
+            elements.notificationMessage.textContent = message;
+            
+            // 设置通知类型
+            elements.notificationContent.className = 'bg-white rounded-lg shadow-lg p-4 flex items-start';
+            elements.notificationIcon.className = 'flex-shrink-0 mr-3';
+            
+            switch (type) {
+                case 'success':
+                    elements.notificationContent.classList.add('border-l-4', 'border-success');
+                    elements.notificationIcon.classList.add('text-success');
+                    elements.notificationIcon.innerHTML = '<i class="fa fa-check-circle text-xl"></i>';
+                    break;
+                case 'error':
+                    elements.notificationContent.classList.add('border-l-4', 'border-danger');
+                    elements.notificationIcon.classList.add('text-danger');
+                    elements.notificationIcon.innerHTML = '<i class="fa fa-exclamation-circle text-xl"></i>';
+                    break;
+                case 'warning':
+                    elements.notificationContent.classList.add('border-l-4', 'border-warning');
+                    elements.notificationIcon.classList.add('text-warning');
+                    elements.notificationIcon.innerHTML = '<i class="fa fa-exclamation-triangle text-xl"></i>';
+                    break;
+                default:
+                    elements.notificationContent.classList.add('border-l-4', 'border-primary');
+                    elements.notificationIcon.classList.add('text-primary');
+                    elements.notificationIcon.innerHTML = '<i class="fa fa-info-circle text-xl"></i>';
+            }
+            
+            // 显示通知
+            elements.notification.classList.remove('translate-x-full', 'opacity-0');
+            
+            // 设置自动关闭
+            const timeoutId = setTimeout(() => {
+                closeNotification();
+            }, 5000);
+            
+            // 点击关闭按钮时清除定时器
+            elements.closeNotificationBtn.onclick = () => {
+                clearTimeout(timeoutId);
+                closeNotification();
+            };
+        }
+
+        // 关闭通知
+        function closeNotification() {
+            elements.notification.classList.add('translate-x-full', 'opacity-0');
+        }
+
+        // 重置搜索筛选
+        function resetSearchFilter() {
+            elements.searchAdvertiserInput.value = '';
+            state.searchQuery = '';
+            state.currentPage = 1;
+            renderWhitelistTable();
+        }
+
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 添加白名单按钮
+            elements.addWhiteListBtn.addEventListener('click', openAddWhitelistModal);
+            elements.addFirstRecordBtn.addEventListener('click', openAddWhitelistModal);
+            
+            // 关闭模态框按钮
+            elements.closeModalBtn.addEventListener('click', () => {
+                elements.whitelistModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 取消表单按钮
+            elements.cancelFormBtn.addEventListener('click', () => {
+                elements.whitelistModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 提交表单按钮
+            elements.submitFormBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                saveWhitelist();
+            });
+            
+            // Subid计数更新
+            elements.subidListTextarea.addEventListener('input', updateSubidCount);
+            
+            // 批量添加按钮
+            elements.batchAddBtn.addEventListener('click', batchAddMobIds);
+            
+            // 指定Mob替换按钮
+            elements.replaceMobBtn.addEventListener('click', () => openUpdateMobModal('replace'));
+            
+            // 指定Mob删除按钮
+            elements.deleteMobBtn.addEventListener('click', () => openUpdateMobModal('delete'));
+            
+            // 关闭更新模态框按钮
+            elements.closeUpdateModalBtn.addEventListener('click', () => {
+                elements.updateMobModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 取消更新按钮
+            elements.cancelUpdateBtn.addEventListener('click', () => {
+                elements.updateMobModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 提交更新按钮
+            elements.submitUpdateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleUpdateMob();
+            });
+            
+            // 关闭删除确认模态框按钮
+            elements.cancelDeleteBtn.addEventListener('click', () => {
+                elements.deleteConfirmModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 确认删除按钮
+            elements.confirmDeleteBtn.addEventListener('click', deleteWhitelist);
+            
+            // 关闭查看白名单模态框按钮
+            elements.closeViewModalBtn.addEventListener('click', () => {
+                elements.viewWhitelistModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 关闭查看按钮
+            elements.closeViewBtn.addEventListener('click', () => {
+                elements.viewWhitelistModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            
+            // 查看白名单搜索
+            elements.viewSearchSubid.addEventListener('input', () => {
+                const whitelist = state.whitelists.find(item => item.id === state.currentWhitelistId);
+                if (whitelist) {
+                    renderViewSubidList(whitelist.subids);
+                }
+            });
+            
+            // 搜索广告主
+            elements.searchAdvertiserInput.addEventListener('input', (e) => {
+                state.searchQuery = e.target.value;
+                state.currentPage = 1;
+                renderWhitelistTable();
+            });
+            
+            // 重置筛选
+            elements.resetFilterBtn.addEventListener('click', resetSearchFilter);
+            
+            // 分页按钮
+            elements.prevPageBtn.addEventListener('click', () => {
+                if (state.currentPage > 1) {
+                    state.currentPage--;
+                    renderWhitelistTable();
+                }
+            });
+            
+            elements.nextPageBtn.addEventListener('click', () => {
+                const totalPages = Math.ceil(state.whitelists.length / state.itemsPerPage);
+                if (state.currentPage < totalPages) {
+                    state.currentPage++;
+                    renderWhitelistTable();
+                }
+            });
+        }
+
+        // 初始化应用
+        function initApp() {
+            initAdvertiserSelect();
+            initEventListeners();
+            renderWhitelistTable();
+        }
+
+        // 启动应用
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
+    
