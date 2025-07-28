@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>养老-生育联动基金政策方案与数据模型</title>
+<style>
+  body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f5f7fa; }
+  h1, h2 { color: #2c3e50; }
+  section { background: white; padding: 15px 20px; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.1); }
+  label { display: block; margin: 8px 0 4px; font-weight: 600; }
+  input[type="number"] { width: 100%; max-width: 200px; padding: 6px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+  button { margin-top: 12px; padding: 8px 16px; font-size: 1rem; background-color: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  button:hover { background-color: #1c5980; }
+  #output { margin-top: 20px; }
+  canvas { background: #fff; border: 1px solid #ccc; border-radius: 4px; max-width: 100%; }
+  pre { background: #eee; padding: 12px; border-radius: 4px; overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<h1>养老-生育联动基金政策设计方案与数据模型</h1>
+
+<section>
+  <h2>方案概要</h2>
+  <p>本方案旨在通过将退休人员养老金部分划拨建立“养老-生育联动基金”，与新生儿家庭的补贴配套缴纳及政府财政补助结合，形成稳定且可持续的生育补贴资金来源，激励生育、减轻财政负担，实现代际互助。</p>
+</section>
+
+<section>
+  <h2>参数输入</h2>
+  <label for="births">年度新生儿数量（万）:</label>
+  <input type="number" id="births" value="900" min="0" step="1" />
+
+  <label for="subsidy">每个新生儿年补贴金额（元）:</label>
+  <input type="number" id="subsidy" value="3600" min="0" step="100" />
+
+  <label for="years">补贴发放年限（年）:</label>
+  <input type="number" id="years" value="3" min="1" max="10" step="1" />
+
+  <label for="pensionRate">养老金划拨比例（%）:</label>
+  <input type="number" id="pensionRate" value="3" min="0" max="10" step="0.1" />
+
+  <label for="inflation">补贴金额年涨幅（%）:</label>
+  <input type="number" id="inflation" value="3" min="0" max="10" step="0.1" />
+
+  <label for="birthDecline">新生儿数量年下降率（%）:</label>
+  <input type="number" id="birthDecline" value="1" min="0" max="10" step="0.1" />
+
+  <button id="calcBtn">计算未来5年资金流</button>
+
+  <div id="output"></div>
+</section>
+
+<section>
+  <h2>未来5年资金流折线图</h2>
+  <canvas id="fundChart" width="700" height="350"></canvas>
+</section>
+
+<script>
+  const calcBtn = document.getElementById("calcBtn");
+  const output = document.getElementById("output");
+  const ctx = document.getElementById("fundChart").getContext("2d");
+
+  function drawChart(years, subsidyCosts, pensionFunds) {
+    ctx.clearRect(0, 0, 700, 350);
+
+    // 画布参数
+    const padding = 50;
+    const width = 700 - padding * 2;
+    const height = 350 - padding * 2;
+    const maxValue = Math.max(...subsidyCosts, ...pensionFunds) * 1.1;
+    const stepY = maxValue / 5;
+
+    // 画坐标轴
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, padding + height);
+    ctx.lineTo(padding + width, padding + height);
+    ctx.stroke();
+
+    // Y轴刻度和文字
+    ctx.fillStyle = "#333";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for(let i=0; i<=5; i++) {
+      let y = padding + height - i * (height / 5);
+      let val = Math.round(stepY * i / 100) + "亿";
+      ctx.fillText(val, padding - 10, y);
+      ctx.beginPath();
+      ctx.moveTo(padding - 5, y);
+      ctx.lineTo(padding, y);
+      ctx.stroke();
+    }
+
+    // X轴文字
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    years.forEach((year, i) => {
+      let x = padding + (width / (years.length - 1)) * i;
+      ctx.fillText(year, x, padding + height + 10);
+      // 画竖线辅助
+      ctx.strokeStyle = "#eee";
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, padding + height);
+      ctx.stroke();
+    });
+
+    // 画曲线函数
+    function drawLine(data, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      data.forEach((v, i) => {
+        let x = padding + (width / (data.length - 1)) * i;
+        let y = padding + height - (v / maxValue) * height;
+        if(i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    drawLine(subsidyCosts, "#e74c3c"); // 补贴支出，红色
+    drawLine(pensionFunds, "#2980b9"); // 养老金划拨，蓝色
+
+    // 图例
+    ctx.fillStyle = "#e74c3c";
+    ctx.fillRect(padding + 10, padding - 30, 20, 10);
+    ctx.fillStyle = "#333";
+    ctx.fillText("生育补贴支出", padding + 40, padding - 25);
+
+    ctx.fillStyle = "#2980b9";
+    ctx.fillRect(padding + 150, padding - 30, 20, 10);
+    ctx.fillStyle = "#333";
+    ctx.fillText("养老金划拨金额", padding + 180, padding - 25);
+  }
+
+  function calculate() {
+    const birthsInit = Number(document.getElementById("births").value) * 1e4;
+    const subsidyInit = Number(document.getElementById("subsidy").value);
+    const years = Number(document.getElementById("years").value);
+    const pensionRate = Number(document.getElementById("pensionRate").value) / 100;
+    const inflation = Number(document.getElementById("inflation").value) / 100;
+    const birthDecline = Number(document.getElementById("birthDecline").value) / 100;
+
+    // 计算未来5年资金流
+    let yearLabels = [];
+    let subsidyCosts = [];
+    let pensionFunds = [];
+
+    // 保存每年新生儿人数和补贴金额，用于计算当年补贴批次数（最多years批）
+    let birthsArr = [];
+    let subsidyArr = [];
+
+    for(let i=0; i<5; i++) {
+      yearLabels.push("第" + (i+1) + "年");
+      // 计算当年出生人口和补贴金额
+      let births = birthsInit * Math.pow(1 - birthDecline, i);
+      let subsidy = subsidyInit * Math.pow(1 + inflation, i);
+      birthsArr.unshift(births);  // 新增到最前，方便累计批次
+      subsidyArr.unshift(subsidy);
+
+      // 计算补贴支出：当年发放给过去years批新生儿补贴
+      let activeBatches = Math.min(i+1, years);
+      let totalSubsidy = 0;
+      for(let j=0; j<activeBatches; j++) {
+        totalSubsidy += birthsArr[j] * subsidyArr[j];
+      }
+
+      subsidyCosts.push(totalSubsidy / 1e8); // 单位转为亿元
+
+      // 养老金划拨金额 = 养老金总额 * pensionRate，养老金总额假设与当年补贴总额同量级（示范，实际可调整）
+      // 这里简化，按补贴总额 * pensionRate / (1 - pensionRate)计算养老金总额，使养老金划拨对应比例合理
+      let pensionTotalEstimate = totalSubsidy / (1 - pensionRate);
+      let pensionAlloc = pensionTotalEstimate * pensionRate / 1e8;
+      pensionFunds.push(pensionAlloc);
+    }
+
+    // 输出文字结果
+    let resultHTML = "<h3>未来5年资金流预测（单位：亿元）</h3><table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;'><tr><th>年份</th><th>生育补贴支出</th><th>养老金划拨金额</th></tr>";
+    for(let i=0; i<5; i++) {
+      resultHTML += `<tr><td>${yearLabels[i]}</td><td>${subsidyCosts[i].toFixed(2)}</td><td>${pensionFunds[i].toFixed(2)}</td></tr>`;
+    }
+    resultHTML += "</table>";
+    output.innerHTML = resultHTML;
+
+    drawChart(yearLabels, subsidyCosts, pensionFunds);
+  }
+
+  calcBtn.addEventListener("click", calculate);
+
+  // 页面加载自动计算一次
+  calculate();
+</script>
+
+</body>
+</html>
