@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>授信额度管理系统</title>
+  <!-- 引入Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- 配置Tailwind自定义颜色和字体 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36CFC9',
+            success: '#52C41A',
+            warning: '#FAAD14',
+            danger: '#FF4D4F',
+            neutral: {
+              100: '#F5F5F5',
+              200: '#E5E5E5',
+              300: '#D4D4D4',
+              400: '#A3A3A3',
+              500: '#737373',
+              600: '#525252',
+              700: '#404040',
+              800: '#262626',
+              900: '#171717',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .tab-active {
+        @apply border-primary text-primary font-medium;
+      }
+      .table-hover-effect {
+        @apply transition-all duration-200 hover:bg-primary/5;
+      }
+      .btn-effect {
+        @apply transition-all duration-200 hover:shadow-md active:scale-95;
+      }
+      .filter-input-focus {
+        @apply focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-neutral-800 min-h-screen">
+  <!-- 顶部导航栏 -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-credit-card text-primary text-2xl"></i>
+        <h1 class="text-xl font-bold text-neutral-800">授信额度管理系统</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <button class="text-neutral-600 hover:text-primary transition-colors">
+          <i class="fa fa-bell-o"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <img src="https://picsum.photos/id/1005/40/40" alt="用户头像" class="w-8 h-8 rounded-full object-cover">
+          <span class="text-sm font-medium">管理员</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要内容区 -->
+  <main class="container mx-auto px-4 py-6">
+    <!-- Tab切换区域 -->
+    <div class="mb-6 border-b border-neutral-200">
+      <div class="flex -mb-px">
+        <button id="pending-tab" class="tab-active py-4 px-6 border-b-2 border-transparent rounded-t-lg" onclick="switchTab('pending')">
+          <i class="fa fa-clock-o mr-2"></i>待确认
+        </button>
+        <button id="confirmed-tab" class="py-4 px-6 border-b-2 border-transparent rounded-t-lg text-neutral-500 hover:text-neutral-700 transition-colors" onclick="switchTab('confirmed')">
+          <i class="fa fa-check-circle-o mr-2"></i>已确认
+        </button>
+      </div>
+    </div>
+
+    <!-- 操作按钮区域 -->
+    <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
+      <div class="flex space-x-3">
+        <button id="update-all-btn" class="btn-effect bg-primary text-white px-4 py-2 rounded-md flex items-center">
+          <i class="fa fa-refresh mr-2"></i>更新额度
+        </button>
+        <button id="export-btn" class="btn-effect bg-white border border-neutral-300 text-neutral-700 px-4 py-2 rounded-md flex items-center">
+          <i class="fa fa-download mr-2"></i>导出
+        </button>
+      </div>
+      
+      <!-- 筛选区域 -->
+      <div id="filters-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full md:w-auto">
+        <!-- 待确认列表筛选器 -->
+        <div id="pending-filters">
+          <div class="relative">
+            <input type="text" id="filter-username" placeholder="3s username" class="w-full md:w-64 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+            <!-- 下拉选项 (默认隐藏) -->
+            <div id="username-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white shadow-lg rounded-md z-10 max-h-60 overflow-y-auto border border-neutral-200">
+              <div class="p-2">
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="user1" class="rounded text-primary focus:ring-primary">
+                  <label for="user1" class="text-sm">user_001</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="user2" class="rounded text-primary focus:ring-primary">
+                  <label for="user2" class="text-sm">user_002</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="user3" class="rounded text-primary focus:ring-primary">
+                  <label for="user3" class="text-sm">user_003</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <div class="relative">
+            <input type="text" id="filter-bd" placeholder="BD" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+            <!-- 下拉选项 (默认隐藏) -->
+            <div id="bd-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white shadow-lg rounded-md z-10 max-h-60 overflow-y-auto border border-neutral-200">
+              <div class="p-2">
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="bd1" class="rounded text-primary focus:ring-primary">
+                  <label for="bd1" class="text-sm">张三</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="bd2" class="rounded text-primary focus:ring-primary">
+                  <label for="bd2" class="text-sm">李四</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <div class="relative">
+            <input type="text" id="filter-bd-am" placeholder="BD-AM" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+            <!-- 下拉选项 (默认隐藏) -->
+            <div id="bd-am-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white shadow-lg rounded-md z-10 max-h-60 overflow-y-auto border border-neutral-200">
+              <div class="p-2">
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="bdam1" class="rounded text-primary focus:ring-primary">
+                  <label for="bdam1" class="text-sm">王五</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="bdam2" class="rounded text-primary focus:ring-primary">
+                  <label for="bdam2" class="text-sm">赵六</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 已确认列表额外的付款类型筛选器 (默认隐藏) -->
+        <div id="payment-type-filter" class="hidden">
+          <div class="relative">
+            <input type="text" id="filter-payment" placeholder="付款类型" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+            <!-- 下拉选项 (默认隐藏) -->
+            <div id="payment-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white shadow-lg rounded-md z-10 max-h-60 overflow-y-auto border border-neutral-200">
+              <div class="p-2">
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="payment1" class="rounded text-primary focus:ring-primary">
+                  <label for="payment1" class="text-sm">预付</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="payment2" class="rounded text-primary focus:ring-primary">
+                  <label for="payment2" class="text-sm">后付</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 列表区域 -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+      <!-- 待确认列表 -->
+      <div id="pending-list" class="block">
+        <table class="min-w-full divide-y divide-neutral-200">
+          <thead class="bg-neutral-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">操作</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">3s username</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">原授信额度</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">新授信额度</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">调整比例</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD-AM</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">更新时间</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-neutral-200">
+            <!-- 待确认列表数据行 -->
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="confirm-btn text-primary hover:text-primary/80 font-medium btn-effect" data-id="1">确认</button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_001</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">100,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">60,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="text-danger font-medium">-40.00%</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 09:30</td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="confirm-btn text-primary hover:text-primary/80 font-medium btn-effect" data-id="2">确认</button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_002</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">50,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">30,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="text-danger font-medium">-40.00%</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 10:15</td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="confirm-btn text-primary hover:text-primary/80 font-medium btn-effect" data-id="3">确认</button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_003</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">200,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">130,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="text-danger font-medium">-35.00%</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 11:45</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- 分页 -->
+        <div class="px-6 py-4 bg-white border-t border-neutral-200 flex items-center justify-between">
+          <div class="flex-1 flex justify-between sm:hidden">
+            <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 btn-effect">上一页</a>
+            <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 btn-effect">下一页</a>
+          </div>
+          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p class="text-sm text-neutral-700">
+                显示第 <span class="font-medium">1</span> 到 <span class="font-medium">3</span> 条，共 <span class="font-medium">8</span> 条记录
+              </p>
+            </div>
+            <div>
+              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 btn-effect">
+                  <span class="sr-only">上一页</span>
+                  <i class="fa fa-chevron-left text-xs"></i>
+                </a>
+                <a href="#" aria-current="page" class="z-10 bg-primary text-white relative inline-flex items-center px-4 py-2 border border-primary text-sm font-medium btn-effect">1</a>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">2</a>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">3</a>
+                <span class="relative inline-flex items-center px-4 py-2 border border-neutral-300 bg-white text-sm font-medium text-neutral-700">...</span>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">8</a>
+                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 btn-effect">
+                  <span class="sr-only">下一页</span>
+                  <i class="fa fa-chevron-right text-xs"></i>
+                </a>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已确认列表 (默认隐藏) -->
+      <div id="confirmed-list" class="hidden">
+        <table class="min-w-full divide-y divide-neutral-200">
+          <thead class="bg-neutral-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">操作</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">3s username</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">授信额度</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD-AM</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">付款类型</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">确认时间</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-neutral-200">
+            <!-- 已确认列表数据行 -->
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="log-btn text-primary hover:text-primary/80 font-medium btn-effect flex items-center" data-id="101">
+                  <span>变更日志</span>
+                  <i class="fa fa-angle-down ml-1 transition-transform duration-200"></i>
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_004</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">80,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 15:30</td>
+            </tr>
+            
+            <!-- 变更日志详情 (默认隐藏) -->
+            <tr id="log-101" class="hidden bg-neutral-50">
+              <td colspan="7" class="px-6 py-4">
+                <div class="ml-6 border-l-2 border-primary pl-4">
+                  <h4 class="text-sm font-medium text-neutral-800 mb-3">变更记录:</h4>
+                  <table class="min-w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-neutral-200">
+                        <th class="text-left pb-2 text-neutral-500">3s username</th>
+                        <th class="text-left pb-2 text-neutral-500">原授信额度</th>
+                        <th class="text-left pb-2 text-neutral-500">新授信额度</th>
+                        <th class="text-left pb-2 text-neutral-500">确认人</th>
+                        <th class="text-left pb-2 text-neutral-500">变更时间</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="border-b border-neutral-200">
+                        <td class="py-2 text-neutral-700">user_004</td>
+                        <td class="py-2 text-neutral-700">100,000.00</td>
+                        <td class="py-2 text-neutral-700">80,000.00</td>
+                        <td class="py-2 text-neutral-700">管理员</td>
+                        <td class="py-2 text-neutral-700">2025-08-11 15:30</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 text-neutral-700">user_004</td>
+                        <td class="py-2 text-neutral-700">90,000.00</td>
+                        <td class="py-2 text-neutral-700">100,000.00</td>
+                        <td class="py-2 text-neutral-700">system</td>
+                        <td class="py-2 text-neutral-700">2025-08-10 10:15</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="log-btn text-primary hover:text-primary/80 font-medium btn-effect flex items-center" data-id="102">
+                  <span>变更日志</span>
+                  <i class="fa fa-angle-down ml-1 transition-transform duration-200"></i>
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_005</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">150,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 08:45</td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="log-btn text-primary hover:text-primary/80 font-medium btn-effect flex items-center" data-id="103">
+                  <span>变更日志</span>
+                  <i class="fa fa-angle-down ml-1 transition-transform duration-200"></i>
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_006</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">300,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 16:20</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- 分页 -->
+        <div class="px-6 py-4 bg-white border-t border-neutral-200 flex items-center justify-between">
+          <div class="flex-1 flex justify-between sm:hidden">
+            <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 btn-effect">上一页</a>
+            <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 btn-effect">下一页</a>
+          </div>
+          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p class="text-sm text-neutral-700">
+                显示第 <span class="font-medium">1</span> 到 <span class="font-medium">3</span> 条，共 <span class="font-medium">12</span> 条记录
+              </p>
+            </div>
+            <div>
+              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 btn-effect">
+                  <span class="sr-only">上一页</span>
+                  <i class="fa fa-chevron-left text-xs"></i>
+                </a>
+                <a href="#" aria-current="page" class="z-10 bg-primary text-white relative inline-flex items-center px-4 py-2 border border-primary text-sm font-medium btn-effect">1</a>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">2</a>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">3</a>
+                <span class="relative inline-flex items-center px-4 py-2 border border-neutral-300 bg-white text-sm font-medium text-neutral-700">...</span>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">4</a>
+                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 btn-effect">
+                  <span class="sr-only">下一页</span>
+                  <i class="fa fa-chevron-right text-xs"></i>
+                </a>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 确认弹窗 (默认隐藏) -->
+  <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all">
+      <div class="p-6">
+        <h3 class="text-lg font-medium text-neutral-900 mb-4">确认授信额度</h3>
+        <p class="text-neutral-700 mb-6">此授信额度经过确认后即可生效。</p>
+        <div class="flex justify-end space-x-3">
+          <button id="cancel-confirm" class="px-4 py-2 border border-neutral-300 rounded-md text-neutral-700 hover:bg-neutral-50 btn-effect">取消</button>
+          <button id="submit-confirm" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 btn-effect">确认</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通知提示 (默认隐藏) -->
+  <div id="notification" class="fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 flex items-center">
+    <i id="notification-icon" class="mr-2"></i>
+    <span id="notification-message"></span>
+  </div>
+
+  <script>
+    // 全局变量，存储当前需要确认的记录ID
+    let currentConfirmId = null;
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化筛选器下拉框
+      initFilterDropdowns();
+      
+      // 初始化确认按钮事件
+      initConfirmButtons();
+      
+      // 初始化日志按钮事件
+      initLogButtons();
+      
+      // 初始化更新额度按钮事件
+      initUpdateAllButton();
+      
+      // 初始化导出按钮事件
+      initExportButton();
+      
+      // 初始化弹窗关闭按钮事件
+      document.getElementById('cancel-confirm').addEventListener('click', closeConfirmModal);
+      document.getElementById('submit-confirm').addEventListener('click', submitConfirm);
+    });
+    
+    // 切换Tab
+    function switchTab(tabName) {
+      // 隐藏所有列表
+      document.getElementById('pending-list').classList.add('hidden');
+      document.getElementById('confirmed-list').classList.add('hidden');
+      
+      // 重置所有Tab样式
+      document.getElementById('pending-tab').classList.remove('tab-active');
+      document.getElementById('confirmed-tab').classList.remove('tab-active');
+      document.getElementById('pending-tab').classList.add('text-neutral-500', 'hover:text-neutral-700');
+      document.getElementById('confirmed-tab').classList.add('text-neutral-500', 'hover:text-neutral-700');
+      
+      // 显示选中的列表和激活对应的Tab
+      if (tabName === 'pending') {
+        document.getElementById('pending-list').classList.remove('hidden');
+        document.getElementById('pending-tab').classList.add('tab-active');
+        document.getElementById('pending-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
+        // 隐藏付款类型筛选器
+        document.getElementById('payment-type-filter').classList.add('hidden');
+      } else {
+        document.getElementById('confirmed-list').classList.remove('hidden');
+        document.getElementById('confirmed-tab').classList.add('tab-active');
+        document.getElementById('confirmed-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
+        // 显示付款类型筛选器
+        document.getElementById('payment-type-filter').classList.remove('hidden');
+      }
+    }
+    
+    // 初始化筛选器下拉框
+    function initFilterDropdowns() {
+      const filterInputs = [
+        { input: 'filter-username', dropdown: 'username-dropdown' },
+        { input: 'filter-bd', dropdown: 'bd-dropdown' },
+        { input: 'filter-bd-am', dropdown: 'bd-am-dropdown' },
+        { input: 'filter-payment', dropdown: 'payment-dropdown' }
+      ];
+      
+      filterInputs.forEach(item => {
+        const input = document.getElementById(item.input);
+        const dropdown = document.getElementById(item.dropdown);
+        
+        // 点击输入框显示下拉框
+        input.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('hidden');
+          
+          // 隐藏其他下拉框
+          filterInputs.forEach(other => {
+            if (other.dropdown !== item.dropdown) {
+              document.getElementById(other.dropdown).classList.add('hidden');
+            }
+          });
+        });
+        
+        // 输入框输入时进行模糊搜索
+        input.addEventListener('input', function() {
+          const searchTerm = this.value.toLowerCase();
+          // 这里可以根据实际需求实现模糊搜索逻辑
+          console.log(`搜索 ${item.input}: ${searchTerm}`);
+        });
+      });
+      
+      // 点击页面其他地方隐藏所有下拉框
+      document.addEventListener('click', function() {
+        filterInputs.forEach(item => {
+          document.getElementById(item.dropdown).classList.add('hidden');
+        });
+      });
+    }
+    
+    // 初始化确认按钮事件
+    function initConfirmButtons() {
+      const confirmButtons = document.querySelectorAll('.confirm-btn');
+      confirmButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          currentConfirmId = this.getAttribute('data-id');
+          openConfirmModal();
+        });
+      });
+    }
+    
+    // 初始化日志按钮事件
+    function initLogButtons() {
+      const logButtons = document.querySelectorAll('.log-btn');
+      logButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const logId = this.getAttribute('data-id');
+          const logElement = document.getElementById(`log-${logId}`);
+          const icon = this.querySelector('i');
+          
+          // 切换日志显示状态
+          logElement.classList.toggle('hidden');
+          
+          // 旋转图标
+          if (logElement.classList.contains('hidden')) {
+            icon.style.transform = 'rotate(0deg)';
+          } else {
+            icon.style.transform = 'rotate(180deg)';
+          }
+        });
+      });
+    }
+    
+    // 初始化更新额度按钮事件
+    function initUpdateAllButton() {
+      document.getElementById('update-all-btn').addEventListener('click', function() {
+        // 显示加载状态
+        this.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>更新中...';
+        this.disabled = true;
+        
+        // 模拟更新操作
+        setTimeout(() => {
+          this.innerHTML = '<i class="fa fa-refresh mr-2"></i>更新额度';
+          this.disabled = false;
+          
+          // 显示成功通知
+          showNotification('success', '授信额度已全量更新');
+        }, 1500);
+      });
+    }
+    
+    // 初始化导出按钮事件
+    function initExportButton() {
+      document.getElementById('export-btn').addEventListener('click', function() {
+        // 显示加载状态
+        this.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>导出中...';
+        this.disabled = true;
+        
+        // 模拟导出操作
+        setTimeout(() => {
+          this.innerHTML = '<i class="fa fa-download mr-2"></i>导出';
+          this.disabled = false;
+          
+          // 显示成功通知
+          showNotification('success', 'Excel文件已导出');
+        }, 1500);
+      });
+    }
+    
+    // 打开确认弹窗
+    function openConfirmModal() {
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      // 添加淡入动画
+      setTimeout(() => {
+        document.getElementById('confirm-modal').querySelector('div').classList.add('scale-100');
+        document.getElementById('confirm-modal').querySelector('div').classList.remove('scale-95', 'opacity-0');
+      }, 10);
+    }
+    
+    // 关闭确认弹窗
+    function closeConfirmModal() {
+      const modalContent = document.getElementById('confirm-modal').querySelector('div');
+      modalContent.classList.add('scale-95', 'opacity-0');
+      modalContent.classList.remove('scale-100');
+      
+      setTimeout(() => {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        currentConfirmId = null;
+      }, 200);
+    }
+    
+    // 提交确认
+    function submitConfirm() {
+      if (currentConfirmId) {
+        // 模拟确认操作
+        closeConfirmModal();
+        
+        // 显示加载状态
+        const confirmButton = document.querySelector(`.confirm-btn[data-id="${currentConfirmId}"]`);
+        const originalText = confirmButton.textContent;
+        confirmButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+        confirmButton.disabled = true;
+        
+        setTimeout(() => {
+          // 找到对应的行并移除
+          const row = confirmButton.closest('tr');
+          row.classList.add('opacity-0');
+          
+          setTimeout(() => {
+            row.remove();
+            // 显示成功通知
+            showNotification('success', '授信额度已确认生效');
+          }, 300);
+        }, 1000);
+      }
+    }
+    
+    // 显示通知提示
+    function showNotification(type, message) {
+      const notification = document.getElementById('notification');
+      const icon = document.getElementById('notification-icon');
+      const messageElement = document.getElementById('notification-message');
+      
+      // 设置通知类型样式
+      notification.className = 'fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform transition-transform duration-300 z-50 flex items-center';
+      
+      if (type === 'success') {
+        notification.classList.add('bg-green-50', 'text-green-800', 'border', 'border-green-200');
+        icon.className = 'fa fa-check-circle text-green-500 mr-2';
+      } else if (type === 'error') {
+        notification.classList.add('bg-red-50', 'text-red-800', 'border', 'border-red-200');
+        icon.className = 'fa fa-exclamation-circle text-red-500 mr-2';
+      } else if (type === 'warning') {
+        notification.classList.add('bg-yellow-50', 'text-yellow-800', 'border', 'border-yellow-200');
+        icon.className = 'fa fa-exclamation-triangle text-yellow-500 mr-2';
+      } else {
+        notification.classList.add('bg-blue-50', 'text-blue-800', 'border', 'border-blue-200');
+        icon.className = 'fa fa-info-circle text-blue-500 mr-2';
+      }
+      
+      // 设置消息内容
+      messageElement.textContent = message;
+      
+      // 显示通知
+      notification.style.transform = 'translateX(0)';
+      
+      // 3秒后自动隐藏
+      setTimeout(() => {
+        notification.style.transform = 'translateX(calc(100% + 20px))';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
