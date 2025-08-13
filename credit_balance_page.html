@@ -58,6 +58,16 @@
       .filter-input-focus {
         @apply focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none;
       }
+      .tooltip {
+        @apply invisible absolute -translate-y-full -translate-x-1/2 mb-2 px-3 py-1 bg-neutral-800 text-white text-xs rounded whitespace-nowrap opacity-0 transition-opacity duration-200 z-50;
+      }
+      .tooltip-trigger:hover .tooltip {
+        @apply visible opacity-100;
+      }
+      .tooltip::after {
+        content: '';
+        @apply absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-800;
+      }
     }
   </style>
 </head>
@@ -107,9 +117,9 @@
       </div>
       
       <!-- 筛选区域 -->
-      <div id="filters-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full md:w-auto">
-        <!-- 待确认列表筛选器 -->
-        <div id="pending-filters">
+      <div id="filters-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 w-full md:w-auto">
+        <!-- 通用筛选器 -->
+        <div>
           <div class="relative">
             <input type="text" id="filter-username" placeholder="3s username" class="w-full md:w-64 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
             <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
@@ -173,7 +183,27 @@
           </div>
         </div>
         
-        <!-- 已确认列表额外的付款类型筛选器 (默认隐藏) -->
+        <div>
+          <div class="relative">
+            <input type="text" id="filter-adv-pm" placeholder="Adv PM" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+            <!-- 下拉选项 (默认隐藏) -->
+            <div id="adv-pm-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white shadow-lg rounded-md z-10 max-h-60 overflow-y-auto border border-neutral-200">
+              <div class="p-2">
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="advpm1" class="rounded text-primary focus:ring-primary">
+                  <label for="advpm1" class="text-sm">孙七</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="advpm2" class="rounded text-primary focus:ring-primary">
+                  <label for="advpm2" class="text-sm">周八</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 已确认列表额外筛选器 (默认隐藏) -->
         <div id="payment-type-filter" class="hidden">
           <div class="relative">
             <input type="text" id="filter-payment" placeholder="付款类型" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
@@ -188,6 +218,30 @@
                 <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
                   <input type="checkbox" id="payment2" class="rounded text-primary focus:ring-primary">
                   <label for="payment2" class="text-sm">后付</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="user-status-filter" class="hidden">
+          <div class="relative">
+            <input type="text" id="filter-status" placeholder="用户状态" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+            <!-- 下拉选项 (默认隐藏) -->
+            <div id="status-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white shadow-lg rounded-md z-10 max-h-60 overflow-y-auto border border-neutral-200">
+              <div class="p-2">
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="status1" class="rounded text-primary focus:ring-primary">
+                  <label for="status1" class="text-sm">受限</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="status2" class="rounded text-primary focus:ring-primary">
+                  <label for="status2" class="text-sm">正常</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="status3" class="rounded text-primary focus:ring-primary">
+                  <label for="status3" class="text-sm">缓冲期</label>
                 </div>
               </div>
             </div>
@@ -210,6 +264,7 @@
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">调整比例</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD-AM</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Adv PM</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">更新时间</th>
             </tr>
           </thead>
@@ -227,6 +282,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 09:30</td>
             </tr>
             
@@ -242,6 +298,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">周八</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 10:15</td>
             </tr>
             
@@ -257,6 +314,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 11:45</td>
             </tr>
           </tbody>
@@ -305,8 +363,10 @@
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">授信额度</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD-AM</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Adv PM</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">付款类型</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">确认时间</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">用户状态</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-neutral-200">
@@ -322,15 +382,22 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">80,000.00</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                 <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 15:30</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">受限</span>
+                  <span class="tooltip">用户当前处于受限状态，请可通过申请授信或回款解除。</span>
+                </div>
+              </td>
             </tr>
             
             <!-- 变更日志详情 (默认隐藏) -->
             <tr id="log-101" class="hidden bg-neutral-50">
-              <td colspan="7" class="px-6 py-4">
+              <td colspan="9" class="px-6 py-4">
                 <div class="ml-6 border-l-2 border-primary pl-4">
                   <h4 class="text-sm font-medium text-neutral-800 mb-3">变更记录:</h4>
                   <table class="min-w-full text-sm">
@@ -375,10 +442,16 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">150,000.00</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">周八</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 08:45</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">正常</span>
+                </div>
+              </td>
             </tr>
             
             <tr class="table-hover-effect">
@@ -392,10 +465,17 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">300,000.00</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                 <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 16:20</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">缓冲期</span>
+                  <span class="tooltip buffer-tooltip">用户当前处于缓冲期，将会在 <span class="countdown font-medium" data-end="2025-08-13T18:30:00">05小时20分钟</span> 后转为受限状态，请及时申请授信或回款解除。</span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -437,7 +517,7 @@
 
   <!-- 确认弹窗 (默认隐藏) -->
   <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all scale-95 opacity-0">
       <div class="p-6">
         <h3 class="text-lg font-medium text-neutral-900 mb-4">确认授信额度</h3>
         <p class="text-neutral-700 mb-6">此授信额度经过确认后即可生效。</p>
@@ -476,6 +556,9 @@
       // 初始化导出按钮事件
       initExportButton();
       
+      // 初始化用户状态倒计时
+      initCountdowns();
+      
       // 初始化弹窗关闭按钮事件
       document.getElementById('cancel-confirm').addEventListener('click', closeConfirmModal);
       document.getElementById('submit-confirm').addEventListener('click', submitConfirm);
@@ -498,14 +581,16 @@
         document.getElementById('pending-list').classList.remove('hidden');
         document.getElementById('pending-tab').classList.add('tab-active');
         document.getElementById('pending-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
-        // 隐藏付款类型筛选器
+        // 隐藏已确认列表特有的筛选器
         document.getElementById('payment-type-filter').classList.add('hidden');
+        document.getElementById('user-status-filter').classList.add('hidden');
       } else {
         document.getElementById('confirmed-list').classList.remove('hidden');
         document.getElementById('confirmed-tab').classList.add('tab-active');
         document.getElementById('confirmed-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
-        // 显示付款类型筛选器
+        // 显示已确认列表特有的筛选器
         document.getElementById('payment-type-filter').classList.remove('hidden');
+        document.getElementById('user-status-filter').classList.remove('hidden');
       }
     }
     
@@ -515,7 +600,9 @@
         { input: 'filter-username', dropdown: 'username-dropdown' },
         { input: 'filter-bd', dropdown: 'bd-dropdown' },
         { input: 'filter-bd-am', dropdown: 'bd-am-dropdown' },
-        { input: 'filter-payment', dropdown: 'payment-dropdown' }
+        { input: 'filter-adv-pm', dropdown: 'adv-pm-dropdown' },
+        { input: 'filter-payment', dropdown: 'payment-dropdown' },
+        { input: 'filter-status', dropdown: 'status-dropdown' }
       ];
       
       filterInputs.forEach(item => {
@@ -538,8 +625,19 @@
         // 输入框输入时进行模糊搜索
         input.addEventListener('input', function() {
           const searchTerm = this.value.toLowerCase();
-          // 这里可以根据实际需求实现模糊搜索逻辑
-          console.log(`搜索 ${item.input}: ${searchTerm}`);
+          // 获取所有选项
+          const options = dropdown.querySelectorAll('label');
+          
+          options.forEach(option => {
+            const text = option.textContent.toLowerCase();
+            const parent = option.closest('div');
+            
+            if (text.includes(searchTerm)) {
+              parent.style.display = 'flex';
+            } else {
+              parent.style.display = 'none';
+            }
+          });
         });
       });
       
@@ -620,13 +718,53 @@
       });
     }
     
+    // 初始化缓冲期倒计时
+    function initCountdowns() {
+      const countdownElements = document.querySelectorAll('.countdown');
+      
+      function updateCountdowns() {
+        countdownElements.forEach(element => {
+          const endTime = new Date(element.getAttribute('data-end'));
+          const now = new Date();
+          const diff = endTime - now;
+          
+          if (diff <= 0) {
+            element.textContent = '0小时0分钟';
+            // 如果倒计时结束，更新状态为受限
+            const statusElement = element.closest('.tooltip-trigger').querySelector('span:first-child');
+            statusElement.className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+            statusElement.textContent = '受限';
+            
+            const tooltip = element.closest('.tooltip');
+            tooltip.innerHTML = '用户当前处于受限状态，请可通过申请授信或回款解除。';
+            
+            return;
+          }
+          
+          // 计算小时和分钟
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          
+          element.textContent = `${hours}小时${minutes}分钟`;
+        });
+      }
+      
+      // 初始更新一次
+      updateCountdowns();
+      
+      // 每分钟更新一次
+      setInterval(updateCountdowns, 60000);
+    }
+    
     // 打开确认弹窗
     function openConfirmModal() {
-      document.getElementById('confirm-modal').classList.remove('hidden');
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.remove('hidden');
+      
       // 添加淡入动画
       setTimeout(() => {
-        document.getElementById('confirm-modal').querySelector('div').classList.add('scale-100');
-        document.getElementById('confirm-modal').querySelector('div').classList.remove('scale-95', 'opacity-0');
+        modal.querySelector('div').classList.add('scale-100', 'opacity-100');
+        modal.querySelector('div').classList.remove('scale-95', 'opacity-0');
       }, 10);
     }
     
@@ -634,7 +772,7 @@
     function closeConfirmModal() {
       const modalContent = document.getElementById('confirm-modal').querySelector('div');
       modalContent.classList.add('scale-95', 'opacity-0');
-      modalContent.classList.remove('scale-100');
+      modalContent.classList.remove('scale-100', 'opacity-100');
       
       setTimeout(() => {
         document.getElementById('confirm-modal').classList.add('hidden');
@@ -650,14 +788,13 @@
         
         // 显示加载状态
         const confirmButton = document.querySelector(`.confirm-btn[data-id="${currentConfirmId}"]`);
-        const originalText = confirmButton.textContent;
         confirmButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
         confirmButton.disabled = true;
         
         setTimeout(() => {
           // 找到对应的行并移除
           const row = confirmButton.closest('tr');
-          row.classList.add('opacity-0');
+          row.classList.add('opacity-0', 'transition-opacity', 'duration-300');
           
           setTimeout(() => {
             row.remove();
@@ -705,3 +842,4 @@
   </script>
 </body>
 </html>
+    
