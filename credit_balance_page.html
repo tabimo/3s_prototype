@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
+<html lang="zh-CN"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>授信额度管理系统</title>
@@ -60,6 +58,8 @@
       }
       .tooltip {
         @apply invisible absolute -translate-y-full -translate-x-1/2 mb-2 px-3 py-1 bg-neutral-800 text-white text-xs rounded whitespace-nowrap opacity-0 transition-opacity duration-200 z-50;
+        width: max-content;
+        max-width: 400px;
       }
       .tooltip-trigger:hover .tooltip {
         @apply visible opacity-100;
@@ -67,6 +67,16 @@
       .tooltip::after {
         content: '';
         @apply absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-800;
+      }
+      .balance-tooltip {
+        text-align: left;
+      }
+      .balance-tooltip div:first-child {
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+      .balance-tooltip div:not(:first-child) {
+        margin: 2px 0;
       }
     }
   </style>
@@ -95,25 +105,28 @@
   <main class="container mx-auto px-4 py-6">
     <!-- Tab切换区域 -->
     <div class="mb-6 border-b border-neutral-200">
-      <div class="flex -mb-px">
-        <button id="pending-tab" class="tab-active py-4 px-6 border-b-2 border-transparent rounded-t-lg" onclick="switchTab('pending')">
-          <i class="fa fa-clock-o mr-2"></i>待确认
+      <div class="flex -mb-px overflow-x-auto pb-1 scrollbar-hide">
+        <button id="pending-tab" class="tab-active py-4 px-6 border-b-2 border-transparent rounded-t-lg whitespace-nowrap" onclick="switchTab('pending')">
+          <i class="fa fa-exclamation-circle mr-2"></i>待确认授信额度
         </button>
-        <button id="confirmed-tab" class="py-4 px-6 border-b-2 border-transparent rounded-t-lg text-neutral-500 hover:text-neutral-700 transition-colors" onclick="switchTab('confirmed')">
-          <i class="fa fa-check-circle-o mr-2"></i>已确认
+        <button id="all-tab" class="py-4 px-6 border-b-2 border-transparent rounded-t-lg text-neutral-500 hover:text-neutral-700 transition-colors whitespace-nowrap" onclick="switchTab('all')">
+          <i class="fa fa-users mr-2"></i>全部广告主
         </button>
       </div>
     </div>
 
     <!-- 操作按钮区域 -->
     <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
-      <div class="flex space-x-3">
-        <button id="update-all-btn" class="btn-effect bg-primary text-white px-4 py-2 rounded-md flex items-center">
-          <i class="fa fa-refresh mr-2"></i>更新额度
+      <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+        <button id="sync-btn" class="btn-effect bg-primary text-white px-4 py-2 rounded-md flex items-center">
+          <i class="fa fa-refresh mr-2"></i>同步CRM授信并计算授信余额
         </button>
         <button id="export-btn" class="btn-effect bg-white border border-neutral-300 text-neutral-700 px-4 py-2 rounded-md flex items-center">
           <i class="fa fa-download mr-2"></i>导出
         </button>
+        <div id="sync-info" class="text-sm text-neutral-500 mt-1 sm:mt-0">
+          系统每15分钟更新，最近更新时间：2025-08-19 15:35
+        </div>
       </div>
       
       <!-- 筛选区域 -->
@@ -138,6 +151,10 @@
                   <input type="checkbox" id="user3" class="rounded text-primary focus:ring-primary">
                   <label for="user3" class="text-sm">user_003</label>
                 </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="user9" class="rounded text-primary focus:ring-primary">
+                  <label for="user9" class="text-sm">user_009</label>
+                </div>
               </div>
             </div>
           </div>
@@ -157,6 +174,10 @@
                 <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
                   <input type="checkbox" id="bd2" class="rounded text-primary focus:ring-primary">
                   <label for="bd2" class="text-sm">李四</label>
+                </div>
+                <div class="flex items-center space-x-2 p-2 hover:bg-primary/5 rounded cursor-pointer">
+                  <input type="checkbox" id="bd3" class="rounded text-primary focus:ring-primary">
+                  <label for="bd3" class="text-sm">钱九</label>
                 </div>
               </div>
             </div>
@@ -203,7 +224,7 @@
           </div>
         </div>
         
-        <!-- 已确认列表额外筛选器 (默认隐藏) -->
+        <!-- 全部广告主列表额外筛选器 (默认隐藏) -->
         <div id="payment-type-filter" class="hidden">
           <div class="relative">
             <input type="text" id="filter-payment" placeholder="付款类型" class="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-300 rounded-md filter-input-focus">
@@ -250,9 +271,14 @@
       </div>
     </div>
 
+    <!-- 全部广告主列表提示信息 (默认隐藏) -->
+    <div id="all-tips" class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-6 hidden">
+      <p class="text-sm"><i class="fa fa-lightbulb-o mr-2"></i><strong>Tips：</strong>授信余额 = 授信额度 + 总回款（已核销回款 + 预收剩余金额） - 总Original Revenue + 坏账（不开票的original revenue） + 开票差异（三个月前账单的：Invoice Revenue - Original Revenue）</p>
+    </div>
+
     <!-- 列表区域 -->
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-      <!-- 待确认列表 -->
+      <!-- 待确认授信额度列表 -->
       <div id="pending-list" class="block">
         <table class="min-w-full divide-y divide-neutral-200">
           <thead class="bg-neutral-50">
@@ -272,7 +298,7 @@
             <!-- 待确认列表数据行 -->
             <tr class="table-hover-effect">
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="confirm-btn text-primary hover:text-primary/80 font-medium btn-effect" data-id="1">确认</button>
+                <button class="confirm-btn bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="1">财务确认</button>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_001</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">100,000.00</td>
@@ -288,7 +314,7 @@
             
             <tr class="table-hover-effect">
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="confirm-btn text-primary hover:text-primary/80 font-medium btn-effect" data-id="2">确认</button>
+                <button class="confirm-btn bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="2">财务确认</button>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_002</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">50,000.00</td>
@@ -304,7 +330,7 @@
             
             <tr class="table-hover-effect">
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="confirm-btn text-primary hover:text-primary/80 font-medium btn-effect" data-id="3">确认</button>
+                <button class="confirm-btn bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="3">财务确认</button>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_003</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">200,000.00</td>
@@ -353,129 +379,244 @@
         </div>
       </div>
 
-      <!-- 已确认列表 (默认隐藏) -->
-      <div id="confirmed-list" class="hidden">
+      <!-- 全部广告主列表 (默认隐藏) -->
+      <div id="all-list" class="hidden">
         <table class="min-w-full divide-y divide-neutral-200">
           <thead class="bg-neutral-50">
             <tr>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">操作</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">3s username</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">授信额度</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">授信余额</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">用户状态</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">付款类型</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">BD-AM</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Adv PM</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">付款类型</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">确认时间</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">用户状态</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">更新时间</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-neutral-200">
-            <!-- 已确认列表数据行 -->
+          <tbody class="bg-white divide-y divide-neutral-200" id="all-list-body">
+            <!-- 缓冲期用户记录优先显示 -->
             <tr class="table-hover-effect">
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="log-btn text-primary hover:text-primary/80 font-medium btn-effect flex items-center" data-id="101">
-                  <span>变更日志</span>
-                  <i class="fa fa-angle-down ml-1 transition-transform duration-200"></i>
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button class="apply-credit bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="109">
+                  <i class="fa fa-plus-circle mr-1"></i>申请授信
+                </button>
+                <button class="handle-payment bg-neutral-800 text-white px-3 py-1 rounded text-sm hover:bg-neutral-700 btn-effect" data-id="109">
+                  <i class="fa fa-money mr-1"></i>处理回款
                 </button>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_004</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">80,000.00</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
-                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 15:30</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_009</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">180,000.00</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <div class="tooltip-trigger relative inline-block">
-                  <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">受限</span>
-                  <span class="tooltip">用户当前处于受限状态，请可通过申请授信或回款解除。</span>
+                  <a href="#" class="text-primary hover:underline">-5,200.00</a>
+                  <div class="tooltip balance-tooltip">
+                    <div>计算公式</div>
+                    <div>【授信额度：180,000.00】+【总回款：65,000.00】</div>
+                    <div>-【总Original Revenue：250,200.00】+【坏账：0.00】</div>
+                    <div>+【开票差异：0.00】</div>
+                  </div>
                 </div>
               </td>
-            </tr>
-            
-            <!-- 变更日志详情 (默认隐藏) -->
-            <tr id="log-101" class="hidden bg-neutral-50">
-              <td colspan="9" class="px-6 py-4">
-                <div class="ml-6 border-l-2 border-primary pl-4">
-                  <h4 class="text-sm font-medium text-neutral-800 mb-3">变更记录:</h4>
-                  <table class="min-w-full text-sm">
-                    <thead>
-                      <tr class="border-b border-neutral-200">
-                        <th class="text-left pb-2 text-neutral-500">3s username</th>
-                        <th class="text-left pb-2 text-neutral-500">原授信额度</th>
-                        <th class="text-left pb-2 text-neutral-500">新授信额度</th>
-                        <th class="text-left pb-2 text-neutral-500">确认人</th>
-                        <th class="text-left pb-2 text-neutral-500">变更时间</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr class="border-b border-neutral-200">
-                        <td class="py-2 text-neutral-700">user_004</td>
-                        <td class="py-2 text-neutral-700">100,000.00</td>
-                        <td class="py-2 text-neutral-700">80,000.00</td>
-                        <td class="py-2 text-neutral-700">管理员</td>
-                        <td class="py-2 text-neutral-700">2025-08-11 15:30</td>
-                      </tr>
-                      <tr>
-                        <td class="py-2 text-neutral-700">user_004</td>
-                        <td class="py-2 text-neutral-700">90,000.00</td>
-                        <td class="py-2 text-neutral-700">100,000.00</td>
-                        <td class="py-2 text-neutral-700">system</td>
-                        <td class="py-2 text-neutral-700">2025-08-10 10:15</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </td>
-            </tr>
-            
-            <tr class="table-hover-effect">
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="log-btn text-primary hover:text-primary/80 font-medium btn-effect flex items-center" data-id="102">
-                  <span>变更日志</span>
-                  <i class="fa fa-angle-down ml-1 transition-transform duration-200"></i>
-                </button>
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">缓冲期</span>
+                  <span class="tooltip buffer-tooltip">用户当前处于缓冲期，将会在 <span class="countdown font-medium" data-end="2025-08-15T09:00:00">42小时15分钟</span> 后转为受限状态，请及时申请授信或回款解除。</span>
+                </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_005</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">150,000.00</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">周八</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 08:45</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <div class="tooltip-trigger relative inline-block">
-                  <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">正常</span>
-                </div>
-              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">钱九</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 14:25</td>
             </tr>
             
             <tr class="table-hover-effect">
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="log-btn text-primary hover:text-primary/80 font-medium btn-effect flex items-center" data-id="103">
-                  <span>变更日志</span>
-                  <i class="fa fa-angle-down ml-1 transition-transform duration-200"></i>
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button class="apply-credit bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="103">
+                  <i class="fa fa-plus-circle mr-1"></i>申请授信
+                </button>
+                <button class="handle-payment bg-neutral-800 text-white px-3 py-1 rounded text-sm hover:bg-neutral-700 btn-effect" data-id="103">
+                  <i class="fa fa-money mr-1"></i>处理回款
                 </button>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_006</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">300,000.00</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
-                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <a href="#" class="text-primary hover:underline">-8,500.25</a>
+                  <div class="tooltip balance-tooltip">
+                    <div>计算公式</div>
+                    <div>【授信额度：300,000.00】+【总回款：150,000.00】</div>
+                    <div>-【总Original Revenue：458,500.25】+【坏账：0.00】</div>
+                    <div>+【开票差异：0.00】</div>
+                  </div>
+                </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 16:20</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <div class="tooltip-trigger relative inline-block">
                   <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">缓冲期</span>
                   <span class="tooltip buffer-tooltip">用户当前处于缓冲期，将会在 <span class="countdown font-medium" data-end="2025-08-13T18:30:00">05小时20分钟</span> 后转为受限状态，请及时申请授信或回款解除。</span>
                 </div>
               </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 16:20</td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button class="apply-credit bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="105">
+                  <i class="fa fa-plus-circle mr-1"></i>申请授信
+                </button>
+                <button class="handle-payment bg-neutral-800 text-white px-3 py-1 rounded text-sm hover:bg-neutral-700 btn-effect" data-id="105">
+                  <i class="fa fa-money mr-1"></i>处理回款
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_008</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">250,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <a href="#" class="text-primary hover:underline">-12,300.75</a>
+                  <div class="tooltip balance-tooltip">
+                    <div>计算公式</div>
+                    <div>【授信额度：250,000.00】+【总回款：80,000.00】</div>
+                    <div>-【总Original Revenue：342,300.75】+【坏账：0.00】</div>
+                    <div>+【开票差异：0.00】</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">缓冲期</span>
+                  <span class="tooltip buffer-tooltip">用户当前处于缓冲期，将会在 <span class="countdown font-medium" data-end="2025-08-14T10:15:00">28小时45分钟</span> 后转为受限状态，请及时申请授信或回款解除。</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">周八</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 09:10</td>
+            </tr>
+            
+            <!-- 其他状态的用户记录 -->
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button class="apply-credit bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="101">
+                  <i class="fa fa-plus-circle mr-1"></i>申请授信
+                </button>
+                <button class="handle-payment bg-neutral-800 text-white px-3 py-1 rounded text-sm hover:bg-neutral-700 btn-effect" data-id="101">
+                  <i class="fa fa-money mr-1"></i>处理回款
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_004</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">80,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <a href="#" class="text-primary hover:underline">1,000.00</a>
+                  <div class="tooltip balance-tooltip">
+                    <div>计算公式</div>
+                    <div>【授信额度：20,000.00】+【总回款：10,000.00】</div>
+                    <div>-【总Original Revenue：29,000.00】+【坏账：0.00】</div>
+                    <div>+【开票差异：0.00】</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">受限</span>
+                  <span class="tooltip">用户当前处于受限状态，请可通过申请授信或回款解除。</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">李四</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">王五</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">孙七</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-11 15:30</td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button class="apply-credit bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="102">
+                  <i class="fa fa-plus-circle mr-1"></i>申请授信
+                </button>
+                <button class="handle-payment bg-neutral-800 text-white px-3 py-1 rounded text-sm hover:bg-neutral-700 btn-effect" data-id="102">
+                  <i class="fa fa-money mr-1"></i>处理回款
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_005</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">150,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <a href="#" class="text-primary hover:underline">15,200.50</a>
+                  <div class="tooltip balance-tooltip">
+                    <div>计算公式</div>
+                    <div>【授信额度：150,000.00】+【总回款：50,000.00】</div>
+                    <div>-【总Original Revenue：184,799.50】+【坏账：0.00】</div>
+                    <div>+【开票差异：0.00】</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">正常</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">后付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">周八</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 08:45</td>
+            </tr>
+            
+            <tr class="table-hover-effect">
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button class="apply-credit bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 btn-effect" data-id="104">
+                  <i class="fa fa-plus-circle mr-1"></i>申请授信
+                </button>
+                <button class="handle-payment bg-neutral-800 text-white px-3 py-1 rounded text-sm hover:bg-neutral-700 btn-effect" data-id="104">
+                  <i class="fa fa-money mr-1"></i>处理回款
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">user_007</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">120,000.00</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <a href="#" class="text-primary hover:underline">5,600.00</a>
+                  <div class="tooltip balance-tooltip">
+                    <div>计算公式</div>
+                    <div>【授信额度：120,000.00】+【总回款：30,000.00】</div>
+                    <div>-【总Original Revenue：144,400.00】+【坏账：0.00】</div>
+                    <div>+【开票差异：0.00】</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="tooltip-trigger relative inline-block">
+                  <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">正常</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">预付</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">张三</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">赵六</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">周八</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">2025-08-12 10:30</td>
             </tr>
           </tbody>
         </table>
@@ -489,7 +630,7 @@
           <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p class="text-sm text-neutral-700">
-                显示第 <span class="font-medium">1</span> 到 <span class="font-medium">3</span> 条，共 <span class="font-medium">12</span> 条记录
+                显示第 <span class="font-medium">1</span> 到 <span class="font-medium">6</span> 条，共 <span class="font-medium">14</span> 条记录
               </p>
             </div>
             <div>
@@ -502,7 +643,7 @@
                 <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">2</a>
                 <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">3</a>
                 <span class="relative inline-flex items-center px-4 py-2 border border-neutral-300 bg-white text-sm font-medium text-neutral-700">...</span>
-                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">4</a>
+                <a href="#" class="bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium btn-effect">5</a>
                 <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 btn-effect">
                   <span class="sr-only">下一页</span>
                   <i class="fa fa-chevron-right text-xs"></i>
@@ -547,17 +688,23 @@
       // 初始化确认按钮事件
       initConfirmButtons();
       
-      // 初始化日志按钮事件
-      initLogButtons();
-      
-      // 初始化更新额度按钮事件
-      initUpdateAllButton();
+      // 初始化同步按钮事件
+      initSyncButton();
       
       // 初始化导出按钮事件
       initExportButton();
       
+      // 初始化申请授信和处理回款按钮
+      initOperationButtons();
+      
       // 初始化用户状态倒计时
       initCountdowns();
+      
+      // 初始化数据校验 - 确保只有后付用户有缓冲期状态
+      validateBufferPeriodStatus();
+      
+      // 确保缓冲期记录始终在第一页
+      ensureBufferPeriodsFirstPage();
       
       // 初始化弹窗关闭按钮事件
       document.getElementById('cancel-confirm').addEventListener('click', closeConfirmModal);
@@ -566,32 +713,67 @@
     
     // 切换Tab
     function switchTab(tabName) {
-      // 隐藏所有列表
+      // 隐藏所有列表和提示信息
       document.getElementById('pending-list').classList.add('hidden');
-      document.getElementById('confirmed-list').classList.add('hidden');
+      document.getElementById('all-list').classList.add('hidden');
+      document.getElementById('all-tips').classList.add('hidden');
       
       // 重置所有Tab样式
       document.getElementById('pending-tab').classList.remove('tab-active');
-      document.getElementById('confirmed-tab').classList.remove('tab-active');
+      document.getElementById('all-tab').classList.remove('tab-active');
       document.getElementById('pending-tab').classList.add('text-neutral-500', 'hover:text-neutral-700');
-      document.getElementById('confirmed-tab').classList.add('text-neutral-500', 'hover:text-neutral-700');
+      document.getElementById('all-tab').classList.add('text-neutral-500', 'hover:text-neutral-700');
       
       // 显示选中的列表和激活对应的Tab
       if (tabName === 'pending') {
         document.getElementById('pending-list').classList.remove('hidden');
         document.getElementById('pending-tab').classList.add('tab-active');
         document.getElementById('pending-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
-        // 隐藏已确认列表特有的筛选器
+        // 隐藏全部广告主列表特有的筛选器
         document.getElementById('payment-type-filter').classList.add('hidden');
         document.getElementById('user-status-filter').classList.add('hidden');
       } else {
-        document.getElementById('confirmed-list').classList.remove('hidden');
-        document.getElementById('confirmed-tab').classList.add('tab-active');
-        document.getElementById('confirmed-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
-        // 显示已确认列表特有的筛选器
+        document.getElementById('all-list').classList.remove('hidden');
+        document.getElementById('all-tab').classList.add('tab-active');
+        document.getElementById('all-tab').classList.remove('text-neutral-500', 'hover:text-neutral-700');
+        // 显示全部广告主列表特有的筛选器和提示信息
         document.getElementById('payment-type-filter').classList.remove('hidden');
         document.getElementById('user-status-filter').classList.remove('hidden');
+        document.getElementById('all-tips').classList.remove('hidden');
+        
+        // 切换到全部广告主列表时，确保缓冲期记录在第一页
+        ensureBufferPeriodsFirstPage();
       }
+    }
+    
+    // 确保缓冲期记录在第一页
+    function ensureBufferPeriodsFirstPage() {
+      const tableBody = document.getElementById('all-list-body');
+      if (!tableBody) return;
+      
+      // 获取所有行
+      const rows = Array.from(tableBody.querySelectorAll('tr'));
+      
+      // 分离缓冲期行和其他行
+      const bufferRows = rows.filter(row => {
+        const statusElement = row.querySelector('td:nth-child(5) span:first-child');
+        return statusElement && statusElement.textContent.trim() === '缓冲期';
+      });
+      
+      const otherRows = rows.filter(row => {
+        const statusElement = row.querySelector('td:nth-child(5) span:first-child');
+        return !statusElement || statusElement.textContent.trim() !== '缓冲期';
+      });
+      
+      // 清空表格
+      while (tableBody.firstChild) {
+        tableBody.removeChild(tableBody.firstChild);
+      }
+      
+      // 先添加缓冲期行，再添加其他行
+      [...bufferRows, ...otherRows].forEach(row => {
+        tableBody.appendChild(row);
+      });
     }
     
     // 初始化筛选器下拉框
@@ -660,43 +842,32 @@
       });
     }
     
-    // 初始化日志按钮事件
-    function initLogButtons() {
-      const logButtons = document.querySelectorAll('.log-btn');
-      logButtons.forEach(button => {
-        button.addEventListener('click', function() {
-          const logId = this.getAttribute('data-id');
-          const logElement = document.getElementById(`log-${logId}`);
-          const icon = this.querySelector('i');
-          
-          // 切换日志显示状态
-          logElement.classList.toggle('hidden');
-          
-          // 旋转图标
-          if (logElement.classList.contains('hidden')) {
-            icon.style.transform = 'rotate(0deg)';
-          } else {
-            icon.style.transform = 'rotate(180deg)';
-          }
-        });
-      });
-    }
-    
-    // 初始化更新额度按钮事件
-    function initUpdateAllButton() {
-      document.getElementById('update-all-btn').addEventListener('click', function() {
+    // 初始化同步按钮事件
+    function initSyncButton() {
+      document.getElementById('sync-btn').addEventListener('click', function() {
         // 显示加载状态
-        this.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>更新中...';
+        this.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>同步中...';
         this.disabled = true;
         
-        // 模拟更新操作
+        // 模拟同步操作
         setTimeout(() => {
-          this.innerHTML = '<i class="fa fa-refresh mr-2"></i>更新额度';
+          this.innerHTML = '<i class="fa fa-refresh mr-2"></i>同步CRM授信并计算授信余额';
           this.disabled = false;
           
+          // 更新最近同步时间
+          const now = new Date();
+          const formattedTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+          document.getElementById('sync-info').textContent = `系统每15分钟更新，最近更新时间：${formattedTime}`;
+          
+          // 同步后验证缓冲期状态
+          validateBufferPeriodStatus();
+          
+          // 同步后确保缓冲期记录在第一页
+          ensureBufferPeriodsFirstPage();
+          
           // 显示成功通知
-          showNotification('success', '授信额度已全量更新');
-        }, 1500);
+          showNotification('success', '已成功同步CRM授信并计算授信余额');
+        }, 2000);
       });
     }
     
@@ -715,6 +886,31 @@
           // 显示成功通知
           showNotification('success', 'Excel文件已导出');
         }, 1500);
+      });
+    }
+    
+    // 初始化申请授信和处理回款按钮
+    function initOperationButtons() {
+      // 申请授信按钮
+      const applyButtons = document.querySelectorAll('.apply-credit');
+      applyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const userId = this.getAttribute('data-id');
+          // 模拟跳转CRM系统
+          showNotification('info', `正在跳转到CRM系统的申请授信页面（用户ID: ${userId}）`);
+          // 实际环境中使用：window.location.href = 'CRM的链接';
+        });
+      });
+      
+      // 处理回款按钮
+      const paymentButtons = document.querySelectorAll('.handle-payment');
+      paymentButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const userId = this.getAttribute('data-id');
+          // 模拟跳转Invoice Management列表页
+          showNotification('info', `正在跳转到Invoice Management列表页（用户ID: ${userId}）`);
+          // 实际环境中使用：window.location.href = 'Invoice Management的链接';
+        });
       });
     }
     
@@ -738,6 +934,9 @@
             const tooltip = element.closest('.tooltip');
             tooltip.innerHTML = '用户当前处于受限状态，请可通过申请授信或回款解除。';
             
+            // 状态变更后重新排序
+            ensureBufferPeriodsFirstPage();
+            
             return;
           }
           
@@ -754,6 +953,43 @@
       
       // 每分钟更新一次
       setInterval(updateCountdowns, 60000);
+    }
+    
+    // 验证缓冲期状态 - 确保只有后付用户可以有缓冲期
+    function validateBufferPeriodStatus() {
+      // 获取所有行
+      const rows = document.querySelectorAll('#all-list tbody tr');
+      
+      rows.forEach(row => {
+        // 获取用户状态
+        const statusElement = row.querySelector('td:nth-child(5) span:first-child');
+        const isBufferPeriod = statusElement.textContent.trim() === '缓冲期';
+        
+        // 获取付款类型
+        const paymentTypeElement = row.querySelector('td:nth-child(6) span');
+        const isPostPayment = paymentTypeElement.textContent.trim() === '后付';
+        
+        // 如果是缓冲期但不是后付用户，自动更正为受限状态
+        if (isBufferPeriod && !isPostPayment) {
+          statusElement.className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+          statusElement.textContent = '受限';
+          
+          // 更新提示信息
+          const tooltip = row.querySelector('td:nth-child(5) .tooltip');
+          if (tooltip) {
+            tooltip.innerHTML = '用户当前处于受限状态，请可通过申请授信或回款解除。';
+          }
+          
+          // 移除倒计时元素
+          const countdown = row.querySelector('.countdown');
+          if (countdown) {
+            countdown.remove();
+          }
+        }
+      });
+      
+      // 验证后重新排序
+      ensureBufferPeriodsFirstPage();
     }
     
     // 打开确认弹窗
@@ -799,7 +1035,7 @@
           setTimeout(() => {
             row.remove();
             // 显示成功通知
-            showNotification('success', '授信额度已确认生效');
+            showNotification('success', '授信额度已确认生效，已更新到全部广告主列表');
           }, 300);
         }, 1000);
       }
@@ -840,6 +1076,6 @@
       }, 3000);
     }
   </script>
-</body>
-</html>
-    
+
+
+    </body></html>
