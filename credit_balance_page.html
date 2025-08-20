@@ -956,37 +956,37 @@
     }
     
     // 验证缓冲期状态 - 确保只有后付用户可以有缓冲期
-    function validateBufferPeriodStatus() {
-      // 获取所有行
-      const rows = document.querySelectorAll('#all-list tbody tr');
+    // function validateBufferPeriodStatus() {
+    //   // 获取所有行
+    //   const rows = document.querySelectorAll('#all-list tbody tr');
       
-      rows.forEach(row => {
-        // 获取用户状态
-        const statusElement = row.querySelector('td:nth-child(5) span:first-child');
-        const isBufferPeriod = statusElement.textContent.trim() === '缓冲期';
+    //   rows.forEach(row => {
+    //     // 获取用户状态
+    //     const statusElement = row.querySelector('td:nth-child(5) span:first-child');
+    //     const isBufferPeriod = statusElement.textContent.trim() === '缓冲期';
         
-        // 获取付款类型
-        const paymentTypeElement = row.querySelector('td:nth-child(6) span');
-        const isPostPayment = paymentTypeElement.textContent.trim() === '后付';
+    //     // 获取付款类型
+    //     const paymentTypeElement = row.querySelector('td:nth-child(6) span');
+    //     const isPostPayment = paymentTypeElement.textContent.trim() === '后付';
         
-        // 如果是缓冲期但不是后付用户，自动更正为受限状态
-        if (isBufferPeriod && !isPostPayment) {
-          statusElement.className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
-          statusElement.textContent = '受限';
+    //     // 如果是缓冲期但不是后付用户，自动更正为受限状态
+    //     if (isBufferPeriod && !isPostPayment) {
+    //       statusElement.className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+    //       statusElement.textContent = '受限';
           
-          // 更新提示信息
-          const tooltip = row.querySelector('td:nth-child(5) .tooltip');
-          if (tooltip) {
-            tooltip.innerHTML = '用户当前处于受限状态，请可通过申请授信或回款解除。';
-          }
+    //       // 更新提示信息
+    //       const tooltip = row.querySelector('td:nth-child(5) .tooltip');
+    //       if (tooltip) {
+    //         tooltip.innerHTML = '用户当前处于受限状态，请可通过申请授信或回款解除。';
+    //       }
           
-          // 移除倒计时元素
-          const countdown = row.querySelector('.countdown');
-          if (countdown) {
-            countdown.remove();
-          }
-        }
-      });
+    //       // 移除倒计时元素
+    //       const countdown = row.querySelector('.countdown');
+    //       if (countdown) {
+    //         countdown.remove();
+    //       }
+    //     }
+    //   });
       
       // 验证后重新排序
       ensureBufferPeriodsFirstPage();
